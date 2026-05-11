@@ -54,7 +54,19 @@ def _clean_line(line: str) -> str:
     line = _LINE_EDGE_PUNCT.sub("", line)
     line = _ELLIPSIS_RUN.sub("…", line)
     line = _QUOTE_TAIL_PUNCT.sub("", line)
-    return line.replace("。", "，")
+    for src, tgt in {
+        "醬": "酱",
+        "妳": "你",
+        "廣播": "广播",
+        "聽眾": "听众",
+        "前輩": "前辈",
+        "後輩": "后辈",
+        "啊": "",
+        "嗯": "",
+        "欸": "",
+    }.items():
+        line = line.replace(src, tgt)
+    return line.replace("，", " ").replace("。", " ")
 
 
 def _clean_text(text: str) -> str:

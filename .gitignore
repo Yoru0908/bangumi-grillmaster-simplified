@@ -219,6 +219,8 @@ __marimo__/
 projects/
 cookies.txt
 _test*
+/run_local_test.py
+/tests/local_test/
 
 # platform
 .next/
