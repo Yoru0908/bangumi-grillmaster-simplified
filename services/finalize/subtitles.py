@@ -108,15 +108,24 @@ def _clean_line(line: str) -> str:
 
 
 def _merge_short_lines(text: str) -> str:
-    """Merge line breaks unless text uses dialogue prefix."""
+    """Merge line breaks. Dialogue prefix '-' lines: first stripped, rest kept with space separator."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     if "\n" not in normalized:
         return text
-    # Keep line breaks only for dialogue format: lines starting with "-"
     lines = normalized.split("\n")
     has_dialogue = any(line.strip().startswith("-") for line in lines)
     if has_dialogue:
-        return text
+        # Merge dialogue: drop leading "-" on first line, keep "-" on subsequent lines
+        parts = []
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if i == 0:
+                parts.append(stripped.removeprefix("-").strip())
+            elif stripped.startswith("-"):
+                parts.append(stripped)
+            else:
+                parts.append(stripped)
+        return " ".join(parts)
     # Merge everything else into single line
     plain = "".join(line.strip() for line in lines)
     return text
