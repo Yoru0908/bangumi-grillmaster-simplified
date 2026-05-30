@@ -679,6 +679,7 @@ async function loadWorkspace() {
   }
   nodes.authPanel.classList.add("is-hidden");
   document.querySelector(".landing").style.display = "none";
+  document.getElementById("hero-logout").classList.remove("is-hidden");
   nodes.workspace.classList.remove("is-hidden");
   if (nodes.userEmail) nodes.userEmail.textContent = state.user.email;
   nodes.tabAdmin.classList.toggle("is-hidden", state.user.role !== "admin");
@@ -1277,6 +1278,7 @@ function escapeHtml(value) {
 
 nodes.loginForm.addEventListener("submit", login);
 if (nodes.logoutButton) nodes.logoutButton.addEventListener("click", logout);
+document.getElementById("hero-logout")?.addEventListener("click", logout);
 nodes.playgroundForm.addEventListener("submit", (event) => submitJob(event, "trial"));
 nodes.paidJobForm.addEventListener("submit", (event) => submitJob(event, "paid"));
 nodes.languageSelect.addEventListener("change", (event) => {
