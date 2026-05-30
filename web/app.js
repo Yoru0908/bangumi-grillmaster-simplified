@@ -564,7 +564,7 @@ function applyTranslations() {
   }
 }
 
-const API_BASE = "https://kotoba.46log.com";
+const API_BASE = "https://kotobaapi.46log.com";
 
 async function api(path, options = {}) {
   const response = await fetch(API_BASE + path, {
