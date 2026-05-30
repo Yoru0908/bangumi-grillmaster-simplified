@@ -248,6 +248,25 @@ class SaasHttpApp:
         ):
             return self._download(_session_id(headers), parts[2], parts[4], now=now)
 
+        if method == "POST" and path == "/api/billing/checkout":
+            from services.saas.stripe_handler import create_checkout_session
+            payload = _json_payload(body)
+            user = self.api._require_user(_session_id(headers), now=now)
+            url = create_checkout_session(
+                plan_key=payload["plan"],
+                user_email=user.email,
+                user_id=user.id,
+                base_url=payload.get("base_url", ""),
+            )
+            return _json_response(200, {"url": url})
+        if method == "POST" and path == "/api/billing/webhook":
+            from services.saas.stripe_handler import handle_webhook
+            sig = _header(headers, "stripe-signature")
+            result = handle_webhook(body, sig or "")
+            if result.get("status") == "ok":
+                self.api.grant_credits_from_stripe(result["user_id"], result["minutes"])
+            return _json_response(200, result)
+
         return _json_response(
             404,
             {"error": {"code": "NOT_FOUND", "message": "Route not found"}},

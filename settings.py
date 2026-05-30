@@ -146,6 +146,19 @@ class Settings(BaseSettings):
         default=False,
         description="Enable optional Codex-driven cover image stylization (runs async after DOWNLOADED, joined before archive). Skipped entirely when break_after is set.",
     )
+    # --- Stripe billing --------------------------------------------------------
+    stripe_secret_key: str | None = Field(
+        default=None,
+        description="Stripe secret key for creating checkout sessions",
+    )
+    stripe_publishable_key: str | None = Field(
+        default=None,
+        description="Stripe publishable key for frontend",
+    )
+    stripe_webhook_secret: str | None = Field(
+        default=None,
+        description="Stripe webhook signing secret",
+    )
     codex_executable: str = Field(
         default="codex",
         description="Codex CLI executable name or absolute path",

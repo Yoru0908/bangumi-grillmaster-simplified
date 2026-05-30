@@ -1309,17 +1309,21 @@ nodes.paidSourceUrl.addEventListener("input", (e) => {
 });
 
 // Pricing grid click: copy top-up message
-nodes.pricingGrid?.addEventListener("click", (e) => {
-  const article = e.target.closest("article[data-pack]");
-  if (!article || !state.user) return;
-  const pack = article.dataset.pack;
-  const amounts = { starter: 30, studio: 120, archive: 600 };
-  const mins = amounts[pack];
-  if (mins) {
-    const msg = `请充值 ${mins} 分钟到 ${state.user.email}`;
-    navigator.clipboard?.writeText(msg).then(() => showToast("已复制充值请求"));
+async function handlePricingClick(e) {
+  const card = e.target.closest("[data-plan]");
+  if (!card || !state.user) return;
+  try {
+    const data = await api("/api/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify({ plan: card.dataset.plan, base_url: window.location.origin }),
+    });
+    window.location.href = data.url;
+  } catch (err) {
+    showToast(err.message);
   }
-});
+}
+document.getElementById("pricing-grid")?.addEventListener("click", handlePricingClick);
+document.getElementById("subscription-grid")?.addEventListener("click", handlePricingClick);
 
 applyTranslations();
 initGuestPlayground();

@@ -361,6 +361,18 @@ class SaasApiService:
         ).fetchall()
         return [_audit_row(row) for row in rows]
 
+    def grant_credits_from_stripe(self, user_id: str, minutes: int) -> None:
+        """Grant credits from Stripe payment. Idempotent per stripe session."""
+        from services.saas.credits import CreditLedger
+        import uuid as _uuid
+        CreditLedger(self.conn).grant(
+            user_id=user_id,
+            minutes=float(minutes),
+            reason=f"stripe top-up: {minutes}min",
+            idempotency_key=f"stripe:{user_id}:{_uuid.uuid4().hex[:12]}",
+            created_at=self.now(),
+        )
+
     def _require_user(self, session_id: str | None, *, now: str) -> CurrentUser:
         if not session_id:
             raise ApiError(401, "AUTH_REQUIRED", "Authentication required")

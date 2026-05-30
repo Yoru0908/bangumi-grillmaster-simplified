@@ -195,17 +195,32 @@
                 <p class="panel-copy" data-i18n="topUpCopy">Phase 1 uses manual top-up. Send the operator your account email and desired minutes; credits appear here after admin approval.</p>
               </div>
               <div class="pricing-grid" id="pricing-grid">
-                <article data-pack="starter">
-                  <strong data-i18n="starterPackTitle">Starter</strong>
-                  <span data-i18n="starterPackCopy">30 min for smoke tests</span>
+                <article data-plan="taster" class="pricing-card">
+                  <strong>尝鲜</strong>
+                  <span>¥12 / 60分钟</span>
                 </article>
-                <article data-pack="studio">
-                  <strong data-i18n="studioPackTitle">Studio</strong>
-                  <span data-i18n="studioPackCopy">120 min for regular uploads</span>
+                <article data-plan="popular" class="pricing-card">
+                  <strong>常用</strong>
+                  <span>¥25 / 150分钟 · ¥0.17/min</span>
                 </article>
-                <article data-pack="archive">
-                  <strong data-i18n="archivePackTitle">Archive</strong>
-                  <span data-i18n="archivePackCopy">600 min for batch work</span>
+                <article data-plan="bulk" class="pricing-card">
+                  <strong>畅看</strong>
+                  <span>¥50 / 360分钟 · ¥0.14/min</span>
+                </article>
+              </div>
+              <p class="eyebrow" style="margin-top:1.5rem">包月订阅</p>
+              <div class="pricing-grid" id="subscription-grid">
+                <article data-plan="starter_sub" class="pricing-card sub-card">
+                  <strong>入门</strong>
+                  <span>¥15/月 · 120min · ¥0.125/min</span>
+                </article>
+                <article data-plan="standard_sub" class="pricing-card sub-card">
+                  <strong>标准</strong>
+                  <span>¥29/月 · 300min · ¥0.097/min</span>
+                </article>
+                <article data-plan="pro_sub" class="pricing-card sub-card">
+                  <strong>全追</strong>
+                  <span>¥49/月 · 600min · ¥0.082/min</span>
                 </article>
               </div>
             </section>
@@ -268,6 +283,6 @@
 
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
-    <script src="/app.js?v=8" defer></script>
+    <script src="/app.js?v=9" defer></script>
   </body>
 </html>
