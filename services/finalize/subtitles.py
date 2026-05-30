@@ -127,7 +127,7 @@ def _merge_short_lines(text: str) -> str:
                 parts.append(stripped)
         return " ".join(parts)
     # Merge everything else into single line
-    plain = "".join(line.strip() for line in lines)
+    plain = " ".join(line.strip() for line in lines)
     return text
 
 
