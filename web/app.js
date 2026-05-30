@@ -872,12 +872,20 @@ function renderDownloads(job) {
   }
 
   downloads.forEach((d) => {
-    const link = document.createElement("a");
-    link.className = "download-link";
-    link.href = `${API_BASE}/api/jobs/${encodeURIComponent(job.id)}/download/${d.key}`;
-    link.download = d.label;
-    link.textContent = d.label;
-    nodes.downloadLinks.append(link);
+    const btn = document.createElement("button");
+    btn.className = "download-link";
+    btn.textContent = d.label;
+    btn.addEventListener("click", async () => {
+      const resp = await api(`/api/jobs/${encodeURIComponent(job.id)}/download/${d.key}`);
+      const blob = new Blob([resp], { type: "text/plain; charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = d.label;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    nodes.downloadLinks.append(btn);
   });
 }
 
