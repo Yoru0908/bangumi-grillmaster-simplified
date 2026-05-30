@@ -858,8 +858,8 @@ function failureHint(job) {
 function renderDownloads(job) {
   const title = job.video_title || job.id;
   const downloads = [
-    { key: "original.srt", label: title + " 原文.srt" },
-    { key: "finalized.srt", label: title + " 译文.srt" },
+    { key: "original.srt", label: "原文.srt" },
+    { key: "finalized.srt", label: "译文.srt" },
   ];
   const ready = job.status === "succeeded" || job.stage === "cleanup_completed";
   nodes.downloadLinks.innerHTML = "";
