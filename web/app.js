@@ -677,7 +677,7 @@ async function loadWorkspace() {
   }
   nodes.authPanel.classList.add("is-hidden");
   nodes.workspace.classList.remove("is-hidden");
-  nodes.userEmail.textContent = state.user.email;
+  if (nodes.userEmail) nodes.userEmail.textContent = state.user.email;
   nodes.tabAdmin.classList.toggle("is-hidden", state.user.role !== "admin");
   await Promise.all([loadBilling(), loadJobs(), loadAdminIfNeeded()]);
   switchTab("trial");
@@ -704,7 +704,7 @@ async function loadBilling() {
   const billing = await api("/api/billing");
   state.billing = billing;
   state.providerStatus = billing.provider_status || null;
-  nodes.balanceMinutes.textContent = Number(billing.balance_minutes || 0).toFixed(1);
+  if (nodes.balanceMinutes) nodes.balanceMinutes.textContent = Number(billing.balance_minutes || 0).toFixed(1);
   nodes.heroBalanceMinutes.textContent = Number(billing.balance_minutes || 0).toFixed(1);
   nodes.heroBalance.classList.remove("is-hidden");
   renderProviderStatus();
@@ -1257,7 +1257,7 @@ function escapeHtml(value) {
 }
 
 nodes.loginForm.addEventListener("submit", login);
-nodes.logoutButton.addEventListener("click", logout);
+if (nodes.logoutButton) nodes.logoutButton.addEventListener("click", logout);
 nodes.playgroundForm.addEventListener("submit", (event) => submitJob(event, "trial"));
 nodes.paidJobForm.addEventListener("submit", (event) => submitJob(event, "paid"));
 nodes.languageSelect.addEventListener("change", (event) => {

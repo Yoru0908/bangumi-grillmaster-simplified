@@ -111,8 +111,8 @@
 
         <!-- ═══ Tab: Work ═══ -->
         <section class="tab-panel" id="panel-work" role="tabpanel" aria-labelledby="tab-work">
-          <div class="tab-grid tab-grid--work">
-            <!-- Submit -->
+          <!-- Submit + account bar -->
+          <div class="work-top-bar">
             <section class="panel paid-workspace-panel" id="paid-workspace-panel" aria-labelledby="paid-workspace-title">
               <div>
                 <p class="eyebrow" data-i18n="paidWorkspaceEyebrow">Paid workspace</p>
@@ -129,37 +129,33 @@
                 <button type="submit" class="primary" data-i18n="paidButton">Use credits</button>
               </form>
             </section>
+          </div>
 
-            <!-- Operator -->
-            <aside class="panel account-panel" id="account-panel">
-              <p class="eyebrow" data-i18n="operatorEyebrow">Operator</p>
-              <h2 id="user-email" data-i18n="notSignedIn">Not signed in</h2>
-              <p class="balance" id="account-balance-line"><span id="balance-minutes">0</span> <span data-i18n="minutesLeft">minutes left</span></p>
-              <button id="logout-button" type="button" class="ghost" data-i18n="logoutButton">Logout</button>
-            </aside>
-
-            <!-- Job list -->
-            <section class="panel jobs-panel" aria-labelledby="jobs-title">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow" data-i18n="queueEyebrow">Queue</p>
-                  <h2 id="jobs-title" data-i18n="jobsTitle">Jobs</h2>
+          <!-- Left | Right split -->
+          <div class="work-split">
+            <div class="work-left">
+              <section class="panel jobs-panel" aria-labelledby="jobs-title">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow" data-i18n="queueEyebrow">Queue</p>
+                    <h2 id="jobs-title" data-i18n="jobsTitle">Jobs</h2>
+                  </div>
+                  <button id="refresh-button" type="button" class="ghost" data-i18n="refreshButton">Refresh</button>
                 </div>
-                <button id="refresh-button" type="button" class="ghost" data-i18n="refreshButton">Refresh</button>
-              </div>
-              <div id="job-list" class="job-list" aria-live="polite"></div>
-            </section>
-
-            <!-- Detail -->
-            <section class="panel detail-panel" aria-labelledby="detail-title">
-              <div>
-                <p class="eyebrow" data-i18n="currentRoastEyebrow">Current roast</p>
-                <h2 id="detail-title" data-i18n="detailTitle">Job detail</h2>
-              </div>
-              <div id="job-detail" class="empty-state" data-i18n="selectJobEmpty">Select a job to inspect stages and downloads.</div>
-              <div id="download-links" class="downloads"></div>
-              <ol id="event-list" class="event-list" aria-live="polite"></ol>
-            </section>
+                <div id="job-list" class="job-list" aria-live="polite"></div>
+              </section>
+            </div>
+            <div class="work-right">
+              <section class="panel detail-panel" aria-labelledby="detail-title">
+                <div>
+                  <p class="eyebrow" data-i18n="currentRoastEyebrow">Current roast</p>
+                  <h2 id="detail-title" data-i18n="detailTitle">Job detail</h2>
+                </div>
+                <div id="job-detail" class="empty-state" data-i18n="selectJobEmpty">Select a job to inspect stages and downloads.</div>
+                <div id="download-links" class="downloads"></div>
+                <ol id="event-list" class="event-list" aria-live="polite"></ol>
+              </section>
+            </div>
           </div>
         </section>
 

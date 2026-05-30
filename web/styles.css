@@ -269,22 +269,34 @@ label {
   gap: 18px;
 }
 
-.tab-grid--work {
-  grid-template-columns: minmax(0, 1fr) 260px;
+/* ── Work tab: top bar + left/right split ── */
+.work-top-bar {
+  margin-bottom: 18px;
+}
+
+.work-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 460px);
+  gap: 18px;
   align-items: start;
 }
 
-.tab-grid--work .jobs-panel { grid-column: 1; }
-.tab-grid--work .detail-panel { grid-column: 1 / -1; }
-.tab-grid--work .account-panel { grid-column: 2; grid-row: 1; align-self: start; }
-.tab-grid--work .paid-workspace-panel { grid-column: 1; }
+.work-right {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
 
 @media (max-width: 820px) {
-  .tab-grid--work { grid-template-columns: 1fr; }
-  .tab-grid--work .account-panel { grid-column: 1; grid-row: auto; }
-  .tab-grid--work .paid-workspace-panel,
-  .tab-grid--work .jobs-panel,
-  .tab-grid--work .detail-panel { grid-column: 1; }
+  .work-split {
+    grid-template-columns: 1fr;
+  }
+  .work-right {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
 }
 
 .panel-head,
