@@ -678,6 +678,7 @@ async function loadWorkspace() {
     nodes.guestSection.style.display = "none";
   }
   nodes.authPanel.classList.add("is-hidden");
+  document.querySelector(".landing").style.display = "none";
   nodes.workspace.classList.remove("is-hidden");
   if (nodes.userEmail) nodes.userEmail.textContent = state.user.email;
   nodes.tabAdmin.classList.toggle("is-hidden", state.user.role !== "admin");
@@ -687,6 +688,7 @@ async function loadWorkspace() {
 }
 
 function renderSignedOut() {
+  const landing = document.querySelector(".landing"); if (landing) landing.style.display = "";
   stopPolling();
   renderGuestPlayground();
   nodes.workspace.classList.add("is-hidden");
