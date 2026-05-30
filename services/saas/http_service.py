@@ -330,6 +330,8 @@ class SaasHttpApp:
             path.read_bytes(),
             {
                 "Content-Type": "text/plain; charset=utf-8",
+                "Access-Control-Allow-Origin": "https://kotoba-forge.pages.dev",
+                "Access-Control-Allow-Credentials": "true",
                 "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
             },
         )
