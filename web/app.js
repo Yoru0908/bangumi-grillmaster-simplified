@@ -874,7 +874,8 @@ function renderDownloads(job) {
   downloads.forEach((d) => {
     const link = document.createElement("a");
     link.className = "download-link";
-    link.href = `/api/jobs/${encodeURIComponent(job.id)}/download/${d.key}`;
+    link.href = `${API_BASE}/api/jobs/${encodeURIComponent(job.id)}/download/${d.key}`;
+    link.download = d.label;
     link.textContent = d.label;
     nodes.downloadLinks.append(link);
   });
