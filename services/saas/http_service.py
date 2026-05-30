@@ -357,7 +357,7 @@ class SaasHttpApp:
         )
 
 
-ALLOWED_ORIGINS = {"https://kotoba-forge.pages.dev", "https://kotoba.46log.com"}
+ALLOWED_ORIGINS = {"https://kotoba-forge.pages.dev", "https://kotoba.46log.com", "https://kotoba.sakamichi-tools.cfd"}
 
 
 def _cors_headers(origin: str | None) -> dict:
