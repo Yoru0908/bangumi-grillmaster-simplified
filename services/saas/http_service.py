@@ -276,7 +276,7 @@ class SaasHttpApp:
         )
         cookie = (
             f"session_id={result.session['id']}; Path=/; HttpOnly; "
-            "SameSite=Lax"
+            "SameSite=None; Secure; Partitioned"
         )
         self.last_login_cookie = cookie
         return _json_response(
