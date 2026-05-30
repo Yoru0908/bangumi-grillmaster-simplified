@@ -324,6 +324,25 @@ label {
 }
 
 .tab:hover {
+.pricing-card {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.pricing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 rgba(32, 24, 17, 0.12);
+  border-color: var(--ember);
+}
+.pricing-card:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+.pricing-card.sub-card {
+  border-color: var(--sage);
+}
+.pricing-card.sub-card:hover {
+  border-color: var(--ember);
+}
   color: var(--ink);
   background: rgba(245, 236, 216, 0.5);
 }
