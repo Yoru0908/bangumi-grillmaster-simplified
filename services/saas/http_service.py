@@ -56,38 +56,30 @@ class SaasHttpApp:
         headers: dict[str, str],
         body: bytes,
     ) -> HttpResponse:
+        origin = _header(headers, "origin")
         try:
-            response = self._handle(method.upper(), urlparse(path).path, headers, body)
-            # Inject CORS headers into every response
-            cors = _cors_headers(_header(headers, "origin"))
-            response.headers.update(cors)
-            return response
+            resp = self._handle(method.upper(), urlparse(path).path, headers, body)
+            cors = _cors_headers(origin)
+            if cors:
+                resp.headers.update(cors)
+            return resp
         except ApiError as exc:
-            err_resp = _json_response(
-            cors = _cors_headers(_header(headers, "origin"))
-            err_resp.headers.update(cors)
-            return err_resp
+            return _json_response(
                 exc.status_code,
                 {"error": {"code": exc.code, "message": exc.message}},
             )
         except (InvalidCredentials, AccountDisabled) as exc:
-            err_resp = _json_response(
+            return _json_response(
                 401,
                 {"error": {"code": "AUTH_FAILED", "message": str(exc)}},
             )
-            err_resp.headers.update(_cors_headers(_header(headers, "origin")))
-            return err_resp
         except json.JSONDecodeError:
-            err_resp = _json_response(
+            return _json_response(
                 400,
                 {"error": {"code": "INVALID_JSON", "message": "Invalid JSON body"}},
             )
-            err_resp.headers.update(_cors_headers(_header(headers, "origin")))
-            return err_resp
-            err_resp.headers.update(_cors_headers(_header(headers, "origin")))
-            return err_resp
         except KeyError as exc:
-            err_resp = _json_response(
+            return _json_response(
                 400,
                 {
                     "error": {
@@ -105,12 +97,8 @@ class SaasHttpApp:
         body: bytes,
     ) -> HttpResponse:
         now = self.now()
-        origin = _header(headers, "origin")
-        cors = _cors_headers(origin)
-        if method == "OPTIONS":
-            return _cors_preflight(origin)
         if method == "GET" and path == "/":
-            return self._static_file("index.html", "text/html; charset=utf-8", cors)
+            return self._static_file("index.html", "text/html; charset=utf-8")
         if method == "GET" and path == "/app.js":
             return self._static_file("app.js", "text/javascript; charset=utf-8")
         if method == "GET" and path == "/styles.css":
@@ -291,7 +279,7 @@ class SaasHttpApp:
         )
         cookie = (
             f"session_id={result.session['id']}; Path=/; HttpOnly; "
-            "SameSite=None; Secure; Partitioned"
+            "SameSite=Lax"
         )
         self.last_login_cookie = cookie
         return _json_response(
@@ -345,8 +333,6 @@ class SaasHttpApp:
             path.read_bytes(),
             {
                 "Content-Type": "text/plain; charset=utf-8",
-                "Access-Control-Allow-Origin": "https://kotoba-forge.pages.dev",
-                "Access-Control-Allow-Credentials": "true",
                 "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
             },
         )
@@ -364,14 +350,6 @@ def _cors_headers(origin: str | None) -> dict:
     return {}
 
 
-def _cors_preflight(origin: str | None) -> HttpResponse:
-    cors = _cors_headers(origin)
-    cors.update({"Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-                  "Access-Control-Allow-Headers": "Content-Type",
-                  "Access-Control-Max-Age": "86400"})
-    return HttpResponse(204, b"", cors)
-
-
 def _json_payload(body: bytes) -> dict:
     return json.loads((body or b"{}").decode("utf-8"))
 
@@ -381,12 +359,8 @@ def _json_response(
     payload: dict,
     *,
     headers: dict[str, str] | None = None,
-    origin: str | None = None,
 ) -> HttpResponse:
-    response_headers = {
-        "Content-Type": "application/json; charset=utf-8",
-    }
-    response_headers.update(_cors_headers(origin))
+    response_headers = {"Content-Type": "application/json; charset=utf-8"}
     if headers:
         response_headers.update(headers)
     return HttpResponse(
