@@ -21,6 +21,7 @@ from services.gemini.pre_pass import (
     SegmentSummary,
     run_pre_pass,
 )
+from services.gemini.errors import PrePassError
 from services.media import TimeRange
 
 
@@ -51,6 +52,20 @@ class _FakeAio:
 class _FakeClient:
     def __init__(self, response: _FakeResponse):
         self.models = _FakeModels(response)
+        self.aio = _FakeAio(self.models)
+
+
+class _FailingModels:
+    def __init__(self, error: Exception):
+        self.error = error
+
+    async def generate_content(self, **kwargs):
+        raise self.error
+
+
+class _FailingClient:
+    def __init__(self, error: Exception):
+        self.models = _FailingModels(error)
         self.aio = _FakeAio(self.models)
 
 
@@ -138,6 +153,59 @@ class GeminiInlineMediaTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("OFFICIAL SOURCE METADATA", config.system_instruction)
         self.assertIn("characters` MUST include", config.system_instruction)
         self.assertIn("exactly as written", config.system_instruction)
+
+    async def test_pre_pass_retry_exhaustion_includes_last_error(self):
+        root = self._make_temp_dir()
+        audio_path = root / "full.opus"
+        frame_path = root / "frame.jpg"
+        asset_manifest = root / "assets.json"
+        audio_path.write_bytes(b"audio-bytes")
+        frame_path.write_bytes(b"frame-bytes")
+        chunks = [
+            [
+                SrtBlock(
+                    index=1,
+                    timecode="00:00:01,000 --> 00:00:02,000",
+                    text="source",
+                )
+            ]
+        ]
+        assets = PrePassMediaAssets(
+            audio=LocalMediaRef(path=audio_path, mime_type="audio/ogg"),
+            frames=[
+                FrameSpec(
+                    path=frame_path,
+                    timestamp_seconds=1.0,
+                    mime_type="image/jpeg",
+                )
+            ],
+            manifest_path=asset_manifest,
+        )
+        client = _FailingClient(
+            RuntimeError("429 RESOURCE_EXHAUSTED: prepayment credits depleted")
+        )
+
+        with (
+            patch(
+                "services.gemini.pre_pass.prepare_pre_pass_media_assets",
+                return_value=assets,
+            ),
+            patch("services.gemini.pre_pass.settings.gemini_chunk_max_retries", 1),
+        ):
+            with self.assertRaises(PrePassError) as raised:
+                await run_pre_pass(
+                    client,
+                    "description",
+                    "1\n00:00:01,000 --> 00:00:02,000\nsource",
+                    root / "video.mp4",
+                    audio_path,
+                    chunks,
+                    root / "pre_pass.json",
+                    root,
+                )
+
+        self.assertIn("Pre-pass failed after 1 attempts", str(raised.exception))
+        self.assertIn("RESOURCE_EXHAUSTED", str(raised.exception))
 
     async def test_chunk_worker_sends_inline_media_parts(self):
         root = self._make_temp_dir()

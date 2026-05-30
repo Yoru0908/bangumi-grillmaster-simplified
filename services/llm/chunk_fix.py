@@ -26,6 +26,8 @@ from .instructions import chunk_fix_instruction
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_CHUNK_FIX_MODEL = "deepseek-v4-flash"
+DEEPSEEK_BACKEND_DIRECT = "deepseek_openai_compatible"
+DEEPSEEK_BACKEND_MAAS = "agent_platform_maas"
 DEEPSEEK_TIMEOUT_SECONDS = 6 * 60
 DEEPSEEK_PRICE_PER_1M_CACHE_HIT_INPUT = 0.0028
 DEEPSEEK_PRICE_PER_1M_CACHE_MISS_INPUT = 0.14
@@ -394,6 +396,69 @@ def _calculate_deepseek_cost(response, log_prefix: str) -> float:
     return total_cost
 
 
+def _maas_api_key() -> str:
+    api_key = settings.deepseek_maas_api_key or settings.agent_platform_api_key
+    if not api_key:
+        raise ValueError(
+            "DEEPSEEK_MAAS_API_KEY or AGENT_PLATFORM_API_KEY is required for "
+            "DEEPSEEK_BACKEND=agent_platform_maas"
+        )
+    return api_key
+
+
+def _chunk_fix_client_config() -> tuple[dict, dict, str, bool]:
+    backend = settings.deepseek_backend
+    if backend == DEEPSEEK_BACKEND_DIRECT:
+        return (
+            {"api_key": settings.deepseek_api_key, "base_url": DEEPSEEK_BASE_URL},
+            {
+                "model": DEEPSEEK_CHUNK_FIX_MODEL,
+                "reasoning_effort": "high",
+                "extra_body": {"thinking": {"type": "enabled"}},
+            },
+            DEEPSEEK_CHUNK_FIX_MODEL,
+            True,
+        )
+    if backend == DEEPSEEK_BACKEND_MAAS:
+        if not settings.deepseek_maas_base_url:
+            raise ValueError(
+                "DEEPSEEK_MAAS_BASE_URL is required for "
+                "DEEPSEEK_BACKEND=agent_platform_maas"
+            )
+        if not settings.deepseek_maas_model:
+            raise ValueError(
+                "DEEPSEEK_MAAS_MODEL is required for "
+                "DEEPSEEK_BACKEND=agent_platform_maas"
+            )
+        return (
+            {
+                "api_key": _maas_api_key(),
+                "base_url": settings.deepseek_maas_base_url,
+            },
+            {"model": settings.deepseek_maas_model},
+            settings.deepseek_maas_model,
+            False,
+        )
+    raise ValueError(f"Unsupported DEEPSEEK_BACKEND: {backend}")
+
+
+def _calculate_fix_call_cost(response, log_prefix: str, *, direct_pricing: bool) -> float:
+    if direct_pricing:
+        return _calculate_deepseek_cost(response, log_prefix)
+
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        logger.warning(f"{log_prefix} MaaS usage metadata is missing")
+        return 0.0
+    logger.info(
+        f"{log_prefix} MaaS usage tokens: prompt={_get_usage_int(usage, 'prompt_tokens')}, "
+        f"completion={_get_usage_int(usage, 'completion_tokens')}, "
+        f"total={_get_usage_int(usage, 'total_tokens')}"
+    )
+    logger.warning(f"{log_prefix} MaaS pricing is not configured; cost recorded as $0")
+    return 0.0
+
+
 async def _call_once(
     source_srt: str,
     broken_output: str,
@@ -403,21 +468,17 @@ async def _call_once(
 ) -> tuple[str, float]:
     """Request one JSON assignment response from DeepSeek."""
     user_message = _build_user_message(source_srt, broken_output, error)
+    client_kwargs, request_kwargs, model_name, direct_pricing = _chunk_fix_client_config()
     logger.info(
         f"{log_prefix} Attempting structural fix via "
-        f"{DEEPSEEK_CHUNK_FIX_MODEL} (effort={reasoning_effort})"
+        f"{settings.deepseek_backend}:{model_name}"
     )
 
-    client = AsyncOpenAI(
-        api_key=settings.deepseek_api_key,
-        base_url=DEEPSEEK_BASE_URL,
-    )
+    client = AsyncOpenAI(**client_kwargs)
 
     response = await _await_with_manual_timeout(
         client.chat.completions.create(
-            model=DEEPSEEK_CHUNK_FIX_MODEL,
-            reasoning_effort=reasoning_effort,
-            extra_body={"thinking": {"type": "enabled"}},
+            **request_kwargs,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": chunk_fix_instruction},
@@ -430,7 +491,11 @@ async def _call_once(
 
     choice = response.choices[0]
     finish_reason = choice.finish_reason
-    cost = _calculate_deepseek_cost(response, log_prefix)
+    cost = _calculate_fix_call_cost(
+        response,
+        log_prefix,
+        direct_pricing=direct_pricing,
+    )
     if finish_reason != "stop":
         raise _ChunkFixCallError(
             f"Fix non-stop finish reason: {finish_reason} (likely length)",

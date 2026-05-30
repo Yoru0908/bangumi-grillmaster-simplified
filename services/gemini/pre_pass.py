@@ -280,7 +280,10 @@ async def run_pre_pass(
                 await asyncio.sleep(backoff)
 
     logger.error(f"[pre-pass] All {max_retries} attempts failed")
+    message = f"Pre-pass failed after {max_retries} attempts"
+    if last_error is not None:
+        message = f"{message}: {last_error}"
     raise PrePassError(
-        f"Pre-pass failed after {max_retries} attempts",
+        message,
         accumulated_cost=total_cost,
     ) from last_error

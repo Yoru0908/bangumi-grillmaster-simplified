@@ -27,6 +27,7 @@ class YtDlpVideoInfo(BaseModel):
     id: str
     title: str
     description: str | None = None
+    duration: float | None = None
 
     @property
     def filename(self) -> str:

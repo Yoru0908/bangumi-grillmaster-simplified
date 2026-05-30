@@ -33,6 +33,26 @@ class Settings(BaseSettings):
         default="gemini-3-flash-preview",
         description="Model identifier for translation tasks",
     )
+    gemini_backend: str = Field(
+        default="google_genai",
+        description="Gemini backend: google_genai or agent_platform",
+    )
+    gemini_agent_platform_api_key: str | None = Field(
+        default=None,
+        description="Agent Platform API key for Gemini REST calls",
+    )
+    gemini_agent_platform_base_url: str = Field(
+        default="https://us-central1-aiplatform.googleapis.com/v1beta1/publishers/google/models",
+        description="Base URL for Agent Platform Gemini publisher models",
+    )
+    gemini_agent_platform_proxy_url: str | None = Field(
+        default=None,
+        description="Optional gemini-chat compatible proxy URL; posts to <url>?model=<model> and parses SSE data",
+    )
+    gemini_agent_platform_thinking_budget: int | None = Field(
+        default=None,
+        description="Thinking budget for Agent Platform Gemini REST calls; set empty to use SDK thinking level",
+    )
     gemini_thinking_level: str = Field(
         default="HIGH",
         description="Thinking level for translation calls. One of: LOW, MEDIUM, HIGH",
@@ -77,6 +97,26 @@ class Settings(BaseSettings):
     # --- Translation: structural fix (DeepSeek, non-Gemini) ------------------
     deepseek_api_key: str = Field(
         description="DeepSeek API key used by the chunk structural fix layer",
+    )
+    deepseek_backend: str = Field(
+        default="deepseek_openai_compatible",
+        description="Backend for chunk structural fix: deepseek_openai_compatible or agent_platform_maas",
+    )
+    deepseek_maas_api_key: str | None = Field(
+        default=None,
+        description="API key/token for Agent Platform MaaS OpenAI-compatible endpoint",
+    )
+    agent_platform_api_key: str | None = Field(
+        default=None,
+        description="Fallback API key/token shared by Agent Platform model backends",
+    )
+    deepseek_maas_base_url: str | None = Field(
+        default=None,
+        description="OpenAI-compatible base URL for DeepSeek on Agent Platform MaaS",
+    )
+    deepseek_maas_model: str | None = Field(
+        default=None,
+        description="Model identifier for DeepSeek on Agent Platform MaaS",
     )
     llm_chunk_fix_max_retries: int = Field(
         default=3,

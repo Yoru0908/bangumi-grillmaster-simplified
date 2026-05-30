@@ -23,7 +23,7 @@ from typing import Iterable
 
 from loguru import logger
 
-from services.srt import SrtBlock, parse_srt, serialize_srt
+from services.srt import SrtBlock, format_timecode_ms, parse_srt, parse_timecode_ms, serialize_srt
 
 ASS_HEADER = """[Script Info]
 ScriptType: v4.00+
@@ -41,6 +41,56 @@ Style: Default,源泉圓體月 M,64,&H00FDFDFD,&H000000FF,&H00000000,&H7D000000,
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
+_TIMECODE_ARROW = re.compile(
+    r"^(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})$"
+)
+
+_DEFAULT_GAP_THRESHOLD_MS = 300
+
+
+def snap_gaps(
+    blocks: list[SrtBlock],
+    threshold_ms: int = _DEFAULT_GAP_THRESHOLD_MS,
+) -> list[SrtBlock]:
+    """Eliminate short inter-subtitle gaps that cause visual flicker.
+
+    For every pair of consecutive blocks where the gap between the end of
+    block *i* and the start of block *i+1* falls in ``(0, threshold_ms]``,
+    extend block *i*'s end time to meet block *i+1*'s start time.
+
+    Returns a new list; the originals are not mutated.
+    """
+    if not blocks:
+        return []
+
+    result = [b.model_copy() for b in blocks]
+    patched = 0
+
+    for i in range(len(result) - 1):
+        cur_tc = _TIMECODE_ARROW.match(result[i].timecode)
+        nxt_tc = _TIMECODE_ARROW.match(result[i + 1].timecode)
+        if not cur_tc or not nxt_tc:
+            continue
+
+        cur_start_str, cur_end_str = cur_tc.group(1), cur_tc.group(2)
+        nxt_start_str = nxt_tc.group(1)
+
+        cur_end_ms = parse_timecode_ms(cur_end_str)
+        nxt_start_ms = parse_timecode_ms(nxt_start_str)
+        gap = nxt_start_ms - cur_end_ms
+
+        if 0 < gap <= threshold_ms:
+            new_end = format_timecode_ms(nxt_start_ms)
+            result[i] = result[i].model_copy(
+                update={"timecode": f"{cur_start_str} --> {new_end}"}
+            )
+            patched += 1
+
+    if patched:
+        logger.info(f"Snap-gap: patched {patched} flash gaps (threshold={threshold_ms}ms)")
+    return result
+
+
 _LINE_EDGE_PUNCT = re.compile(r"^[\s，、；。]+|[\s，、；。]+$")
 _ELLIPSIS_RUN = re.compile(r"(?:\.{3,}|…)+")
 _QUOTE_TAIL_PUNCT = re.compile(r"[\s，、；。]+(?=[」』])")
@@ -54,23 +104,25 @@ def _clean_line(line: str) -> str:
     line = _LINE_EDGE_PUNCT.sub("", line)
     line = _ELLIPSIS_RUN.sub("…", line)
     line = _QUOTE_TAIL_PUNCT.sub("", line)
-    for src, tgt in {
-        "醬": "酱",
-        "妳": "你",
-        "廣播": "广播",
-        "聽眾": "听众",
-        "前輩": "前辈",
-        "後輩": "后辈",
-        "啊": "",
-        "嗯": "",
-        "欸": "",
-    }.items():
-        line = line.replace(src, tgt)
-    return line.replace("，", " ").replace("。", " ")
+    return line.replace("。", "，")
+
+
+_MAX_SINGLE_LINE_CHARS = 25
+
+
+def _merge_short_lines(text: str) -> str:
+    """Merge unnecessary line breaks when the whole text fits on one line."""
+    if "\n" not in text:
+        return text
+    plain = text.replace("\n", "")
+    if len(plain) <= _MAX_SINGLE_LINE_CHARS:
+        return plain
+    return text
 
 
 def _clean_text(text: str) -> str:
-    return "\n".join(_clean_line(line) for line in text.split("\n"))
+    text = "\n".join(_clean_line(line) for line in text.split("\n"))
+    return _merge_short_lines(text)
 
 
 def _format_ass_time(h: str, m: str, s: str, ms: str) -> str:
@@ -114,6 +166,7 @@ def convert_file(
 
     srt_text = input_path.read_text(encoding="utf-8")
     blocks = parse_srt(srt_text)
+    blocks = snap_gaps(blocks)
     ass_text = _render(blocks)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

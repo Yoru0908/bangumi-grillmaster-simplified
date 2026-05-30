@@ -8,6 +8,7 @@ from services.finalize.subtitles import (
     _clean_text,
     _srt_timecode_to_ass,
     convert_file,
+    snap_gaps,
 )
 from services.srt import SrtBlock
 
@@ -289,6 +290,81 @@ class AssConvertFileTests(unittest.TestCase):
 
         convert_file(srt_path, ass_path, finalized_srt_path=finalized_path)
         self.assertTrue(finalized_path.exists())
+
+
+class SnapGapTests(unittest.TestCase):
+    """Tests for snap_gaps() flash-subtitle gap elimination."""
+
+    def _block(self, index: int, start: str, end: str, text: str = "test") -> SrtBlock:
+        return SrtBlock(index=index, timecode=f"{start} --> {end}", text=text)
+
+    def test_small_gap_is_patched(self):
+        blocks = [
+            self._block(1, "00:00:01,000", "00:00:02,000"),
+            self._block(2, "00:00:02,100", "00:00:03,000"),
+        ]
+        result = snap_gaps(blocks, threshold_ms=200)
+        self.assertIn("00:00:02,100", result[0].timecode)
+
+    def test_large_gap_is_not_patched(self):
+        blocks = [
+            self._block(1, "00:00:01,000", "00:00:02,000"),
+            self._block(2, "00:00:03,000", "00:00:04,000"),
+        ]
+        result = snap_gaps(blocks, threshold_ms=200)
+        self.assertIn("00:00:02,000", result[0].timecode)
+
+    def test_zero_gap_is_not_patched(self):
+        blocks = [
+            self._block(1, "00:00:01,000", "00:00:02,000"),
+            self._block(2, "00:00:02,000", "00:00:03,000"),
+        ]
+        result = snap_gaps(blocks, threshold_ms=200)
+        self.assertIn("00:00:02,000", result[0].timecode)
+
+    def test_exact_threshold_is_patched(self):
+        blocks = [
+            self._block(1, "00:00:01,000", "00:00:02,000"),
+            self._block(2, "00:00:02,200", "00:00:03,000"),
+        ]
+        result = snap_gaps(blocks, threshold_ms=200)
+        self.assertIn("00:00:02,200", result[0].timecode)
+
+    def test_multiple_consecutive_gaps(self):
+        blocks = [
+            self._block(1, "00:00:01,000", "00:00:02,000"),
+            self._block(2, "00:00:02,050", "00:00:03,000"),
+            self._block(3, "00:00:03,080", "00:00:04,000"),
+        ]
+        result = snap_gaps(blocks, threshold_ms=200)
+        self.assertIn("00:00:02,050", result[0].timecode)
+        self.assertIn("00:00:03,080", result[1].timecode)
+
+    def test_empty_input(self):
+        self.assertEqual(snap_gaps([]), [])
+
+    def test_single_block(self):
+        blocks = [self._block(1, "00:00:01,000", "00:00:02,000")]
+        result = snap_gaps(blocks)
+        self.assertEqual(len(result), 1)
+        self.assertIn("00:00:02,000", result[0].timecode)
+
+    def test_originals_not_mutated(self):
+        blocks = [
+            self._block(1, "00:00:01,000", "00:00:02,000"),
+            self._block(2, "00:00:02,100", "00:00:03,000"),
+        ]
+        original_tc = blocks[0].timecode
+        snap_gaps(blocks, threshold_ms=200)
+        self.assertEqual(blocks[0].timecode, original_tc)
+
+    def test_overlap_not_touched(self):
+        blocks = [
+            self._block(1, "00:00:01,000", "00:00:02,500"),
+            self._block(2, "00:00:02,000", "00:00:03,000"),
+        ]
+        result = snap_gaps(blocks, threshold_ms=200)
+        self.assertIn("00:00:02,500", result[0].timecode)
 
 
 if __name__ == "__main__":

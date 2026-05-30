@@ -145,6 +145,61 @@ class ChunkFixTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertAlmostEqual(cost, expected_cost)
 
+    async def test_fix_chunk_structure_uses_agent_platform_maas_backend_when_configured(self):
+        FakeAsyncOpenAI.response = make_response(
+            content='{"assignments":[{"output_index":1,"source_index":1}]}',
+            cache_miss_tokens=2000,
+            completion_tokens=1000,
+        )
+
+        with (
+            patch.object(chunk_fix, "AsyncOpenAI", FakeAsyncOpenAI),
+            patch.object(chunk_fix.settings, "llm_chunk_fix_max_retries", 1),
+            patch.object(chunk_fix.settings, "deepseek_backend", "agent_platform_maas", create=True),
+            patch.object(chunk_fix.settings, "deepseek_maas_api_key", "maas-key", create=True),
+            patch.object(chunk_fix.settings, "agent_platform_api_key", None, create=True),
+            patch.object(
+                chunk_fix.settings,
+                "deepseek_maas_base_url",
+                "https://us-central1-aiplatform.googleapis.com/v1/projects/demo/locations/us-central1/endpoints/openapi",
+                create=True,
+            ),
+            patch.object(
+                chunk_fix.settings,
+                "deepseek_maas_model",
+                "publishers/deepseek-ai/models/deepseek-v3",
+                create=True,
+            ),
+        ):
+            text, cost = await chunk_fix.fix_chunk_structure(
+                "1\n00:00:00,000 --> 00:00:01,000\nsource",
+                "7\n00:00:09,000 --> 00:00:10,000\ntranslated",
+                "invalid structure",
+                lambda _text: None,
+                "[test]",
+            )
+
+        self.assertEqual(
+            text,
+            "1\n00:00:00,000 --> 00:00:01,000\ntranslated\n",
+        )
+        self.assertEqual(cost, 0.0)
+        self.assertEqual(
+            FakeAsyncOpenAI.init_calls[0],
+            {
+                "api_key": "maas-key",
+                "base_url": "https://us-central1-aiplatform.googleapis.com/v1/projects/demo/locations/us-central1/endpoints/openapi",
+            },
+        )
+        create_call = FakeAsyncOpenAI.create_calls[0]
+        self.assertEqual(
+            create_call["model"],
+            "publishers/deepseek-ai/models/deepseek-v3",
+        )
+        self.assertNotIn("reasoning_effort", create_call)
+        self.assertNotIn("extra_body", create_call)
+        self.assertEqual(create_call["response_format"], {"type": "json_object"})
+
     async def test_validation_failure_retries_with_high_effort(self):
         responses = [
             make_response(

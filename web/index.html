@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kotoba Forge</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <!-- ═══ Hero (always visible) ═══ -->
+      <header class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow" data-i18n="heroEyebrow">Subtitle kiln control room</p>
+          <h1 id="page-title">Kotoba Forge</h1>
+          <p class="lede" data-i18n="heroLede">
+            Submit a YouTube URL, watch each subtitle stage cook, then download the SRT artifacts.
+          </p>
+        </div>
+        <div class="hero-tools">
+          <label class="language-picker">
+            <span data-i18n="languageLabel">Language</span>
+            <select id="language-select" aria-label="Language">
+              <option value="zh-Hans">简体中文</option>
+              <option value="zh-Hant">繁體中文</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </select>
+          </label>
+          <div class="status-card" aria-live="polite">
+            <span class="status-dot" id="health-dot"></span>
+            <span id="health-text" data-i18n="healthChecking">Checking API...</span>
+          </div>
+          <div class="balance-card is-hidden" id="hero-balance" aria-live="polite">
+            <span class="balance-icon">⏱</span>
+            <span id="hero-balance-minutes">0.0</span>
+            <span class="balance-unit" data-i18n="minutesShort">min</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══ Guest Playground (always visible, no login) ═══ -->
+      <section class="panel playground-panel" id="guest-playground-static">
+        <div>
+          <p class="eyebrow">Playground</p>
+          <h2>免费试炼</h2>
+          <p class="panel-copy">无需登录，粘贴 YouTube 链接即刻体验字幕生成。仅限 1 分钟以内短视频。</p>
+        </div>
+        <form id="guest-form-static" class="submit-form" onsubmit="return false">
+          <label>
+            <span>YouTube 链接</span>
+            <input id="guest-url-static" name="source_url" type="url" placeholder="https://www.youtube.com/watch?v=..." required>
+          </label>
+          <button type="submit">启动试炼任务</button>
+        </form>
+        <p class="panel-copy" style="margin-top:1rem">
+          已有账号？<a href="#" id="static-show-login" onclick="document.getElementById('guest-playground-static').style.display='none';document.getElementById('auth-panel').style.display='';document.getElementById('auth-panel').classList.remove('is-hidden');return false">点击登录</a>
+        </p>
+      </section>
+
+      <!-- ═══ Auth Panel (before login) ═══ -->
+      <section class="panel auth-panel is-hidden" id="auth-panel" aria-labelledby="login-title" style="display:none">
+        <div>
+          <p class="eyebrow" data-i18n="inviteEyebrow">Invite access</p>
+          <h2 id="login-title" data-i18n="loginTitle">Open the kitchen</h2>
+        </div>
+        <form id="login-form" class="form-grid">
+          <label>
+            <span data-i18n="emailLabel">邮箱</span>
+            <input id="email" name="email" type="email" autocomplete="email" required>
+          </label>
+          <label>
+            <span data-i18n="passwordLabel">密码</span>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button type="submit" data-i18n="loginButton">Login</button>
+        </form>
+      </section>
+
+      <!-- ═══ Workspace (after login) ═══ -->
+      <section class="workspace is-hidden" id="workspace" aria-label="SaaS workspace">
+
+        <!-- Tab bar -->
+        <nav class="tab-bar" role="tablist" aria-label="Sections">
+          <button role="tab" aria-selected="true" class="tab is-active" data-tab="trial" data-i18n="tabTrial">试用</button>
+          <button role="tab" aria-selected="false" class="tab" data-tab="work" data-i18n="tabWork">工作台</button>
+          <button role="tab" aria-selected="false" class="tab" data-tab="billing" data-i18n="tabBilling">充值</button>
+          <button role="tab" aria-selected="false" class="tab is-hidden" data-tab="admin" id="tab-admin" data-i18n="tabAdmin">管理</button>
+        </nav>
+
+        <!-- ═══ Tab: Trial ═══ -->
+        <section class="tab-panel is-active" id="panel-trial" role="tabpanel" aria-labelledby="tab-trial">
+          <div class="tab-grid">
+            <section class="panel playground-panel" id="playground-panel" aria-labelledby="playground-title">
+              <div>
+                <p class="eyebrow" data-i18n="playgroundEyebrow">Playground</p>
+                <h2 id="playground-title" data-i18n="playgroundTitle">Try a short clip first</h2>
+                <p class="panel-copy" data-i18n="playgroundCopy">Free trial lane for short videos. Use it to confirm subtitles and downloads before spending credits.</p>
+              </div>
+              <form id="playground-form" class="submit-form">
+                <label>
+                  <span data-i18n="sourceUrlLabel">YouTube URL</span>
+                  <input id="playground-source-url" name="source_url" type="url" placeholder="https://www.youtube.com/watch?v=..." data-i18n-placeholder="sourceUrlPlaceholder" required>
+                </label>
+                <p id="playground-estimate" class="estimate-line is-hidden"></p>
+                <button type="submit" data-i18n="trialButton">Start playground job</button>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <!-- ═══ Tab: Work ═══ -->
+        <section class="tab-panel" id="panel-work" role="tabpanel" aria-labelledby="tab-work">
+          <div class="tab-grid tab-grid--work">
+            <!-- Submit -->
+            <section class="panel paid-workspace-panel" id="paid-workspace-panel" aria-labelledby="paid-workspace-title">
+              <div>
+                <p class="eyebrow" data-i18n="paidWorkspaceEyebrow">Paid workspace</p>
+                <h2 id="paid-workspace-title" data-i18n="paidWorkspaceTitle">Process the full video</h2>
+                <p class="panel-copy" data-i18n="paidWorkspaceCopy">Use credits for real jobs with full pipeline processing and downloadable SRT files.</p>
+              </div>
+              <form id="paid-job-form" class="submit-form">
+                <label>
+                  <span data-i18n="sourceUrlLabel">YouTube URL</span>
+                  <input id="paid-source-url" name="source_url" type="url" placeholder="https://www.youtube.com/watch?v=..." data-i18n-placeholder="sourceUrlPlaceholder" required>
+                </label>
+                <p id="paid-estimate" class="estimate-line is-hidden"></p>
+                <p id="paid-status-message" class="provider-warning is-hidden" aria-live="polite"></p>
+                <button type="submit" class="primary" data-i18n="paidButton">Use credits</button>
+              </form>
+            </section>
+
+            <!-- Operator -->
+            <aside class="panel account-panel" id="account-panel">
+              <p class="eyebrow" data-i18n="operatorEyebrow">Operator</p>
+              <h2 id="user-email" data-i18n="notSignedIn">Not signed in</h2>
+              <p class="balance" id="account-balance-line"><span id="balance-minutes">0</span> <span data-i18n="minutesLeft">minutes left</span></p>
+              <button id="logout-button" type="button" class="ghost" data-i18n="logoutButton">Logout</button>
+            </aside>
+
+            <!-- Job list -->
+            <section class="panel jobs-panel" aria-labelledby="jobs-title">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow" data-i18n="queueEyebrow">Queue</p>
+                  <h2 id="jobs-title" data-i18n="jobsTitle">Jobs</h2>
+                </div>
+                <button id="refresh-button" type="button" class="ghost" data-i18n="refreshButton">Refresh</button>
+              </div>
+              <div id="job-list" class="job-list" aria-live="polite"></div>
+            </section>
+
+            <!-- Detail -->
+            <section class="panel detail-panel" aria-labelledby="detail-title">
+              <div>
+                <p class="eyebrow" data-i18n="currentRoastEyebrow">Current roast</p>
+                <h2 id="detail-title" data-i18n="detailTitle">Job detail</h2>
+              </div>
+              <div id="job-detail" class="empty-state" data-i18n="selectJobEmpty">Select a job to inspect stages and downloads.</div>
+              <div id="download-links" class="downloads"></div>
+              <ol id="event-list" class="event-list" aria-live="polite"></ol>
+            </section>
+          </div>
+        </section>
+
+        <!-- ═══ Tab: Billing ═══ -->
+        <section class="tab-panel" id="panel-billing" role="tabpanel" aria-labelledby="tab-billing">
+          <div class="tab-grid">
+            <section class="panel billing-panel" id="billing-panel" aria-labelledby="top-up-title">
+              <div>
+                <p class="eyebrow" data-i18n="billingEyebrow">Billing</p>
+                <h2 id="top-up-title" data-i18n="topUpTitle">Top up credits</h2>
+                <p class="panel-copy" data-i18n="topUpCopy">Phase 1 uses manual top-up. Send the operator your account email and desired minutes; credits appear here after admin approval.</p>
+              </div>
+              <div class="pricing-grid" id="pricing-grid">
+                <article data-pack="starter">
+                  <strong data-i18n="starterPackTitle">Starter</strong>
+                  <span data-i18n="starterPackCopy">30 min for smoke tests</span>
+                </article>
+                <article data-pack="studio">
+                  <strong data-i18n="studioPackTitle">Studio</strong>
+                  <span data-i18n="studioPackCopy">120 min for regular uploads</span>
+                </article>
+                <article data-pack="archive">
+                  <strong data-i18n="archivePackTitle">Archive</strong>
+                  <span data-i18n="archivePackCopy">600 min for batch work</span>
+                </article>
+              </div>
+            </section>
+            <section class="panel ledger-panel" aria-labelledby="ledger-title">
+              <p class="eyebrow" data-i18n="ledgerEyebrow">Ledger</p>
+              <h2 id="ledger-title" data-i18n="ledgerTitle">Recent transactions</h2>
+              <div id="ledger-list" class="ledger-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <!-- ═══ Tab: Admin ═══ -->
+        <section class="tab-panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin">
+          <div class="tab-grid">
+            <section class="panel admin-panel" id="admin-panel" aria-labelledby="admin-title">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow" data-i18n="adminEyebrow">Admin console</p>
+                  <h2 id="admin-title" data-i18n="adminTitle">Back office heat check</h2>
+                </div>
+                <button id="admin-refresh-button" type="button" class="ghost" data-i18n="adminRefreshButton">Refresh admin</button>
+              </div>
+              <div class="admin-grid">
+                <section aria-labelledby="admin-users-title">
+                  <h3 id="admin-users-title" data-i18n="usersBalancesTitle">Users &amp; balances</h3>
+                  <div id="admin-user-list" class="admin-list" aria-live="polite"></div>
+                </section>
+                <section aria-labelledby="admin-jobs-title">
+                  <h3 id="admin-jobs-title" data-i18n="allJobsTitle">All jobs</h3>
+                  <div id="admin-job-list" class="admin-list" aria-live="polite"></div>
+                </section>
+                <section aria-labelledby="credit-adjust-title">
+                  <h3 id="credit-adjust-title" data-i18n="adjustCreditsTitle">Adjust credits</h3>
+                  <form id="credit-adjust-form" class="form-grid">
+                    <label>
+                      <span data-i18n="targetUserIdLabel">Target user id</span>
+                      <input id="credit-user-id" name="user_id" required>
+                    </label>
+                    <label>
+                      <span data-i18n="minutesLabel">Minutes</span>
+                      <input id="credit-minutes" name="minutes" type="number" step="0.1" required>
+                    </label>
+                    <label>
+                      <span data-i18n="reasonLabel">Reason</span>
+                      <input id="credit-reason" name="reason" required>
+                    </label>
+                    <button type="submit" data-i18n="applyCreditButton">Apply credit change</button>
+                  </form>
+                </section>
+                <section aria-labelledby="audit-title">
+                  <h3 id="audit-title" data-i18n="auditLogsTitle">Audit logs</h3>
+                  <ol id="audit-log-list" class="event-list" aria-live="polite"></ol>
+                </section>
+              </div>
+            </section>
+          </div>
+        </section>
+
+      </section>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

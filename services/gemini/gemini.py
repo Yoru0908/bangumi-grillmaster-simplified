@@ -4,14 +4,15 @@ import asyncio
 import time
 from pathlib import Path
 
-from google import genai
 from loguru import logger
 from pydantic import BaseModel
 
 from settings import settings
 from services.srt import SrtBlock, parse_srt, serialize_srt
 from .assets import prepare_chunk_media_assets
+from .agent_platform import gemini_client
 from .chunk_worker import translate_chunk
+from .compat import ensure_aiohttp_compat
 from .chunker import split_into_chunks
 from .errors import (
     ChunkTranslationError,
@@ -53,10 +54,12 @@ class Gemini:
 
     def __init__(self):
         logger.debug("Initializing Gemini client")
-        self.client = genai.Client(api_key=settings.gemini_api_key)
+        ensure_aiohttp_compat()
+        self.client = gemini_client()
         logger.info(
             f"Gemini client initialized "
-            f"(concurrency={settings.gemini_concurrency}, "
+            f"(backend={settings.gemini_backend}, "
+            f"concurrency={settings.gemini_concurrency}, "
             f"chunk_char_limit={settings.gemini_chunk_char_limit})"
         )
 
