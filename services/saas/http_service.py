@@ -97,6 +97,8 @@ class SaasHttpApp:
         body: bytes,
     ) -> HttpResponse:
         now = self.now()
+        if method == "OPTIONS":
+            return _cors_preflight(_header(headers, "origin"))
         if method == "GET" and path == "/":
             return self._static_file("index.html", "text/html; charset=utf-8")
         if method == "GET" and path == "/app.js":
@@ -355,6 +357,14 @@ class SaasHttpApp:
                 "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
             },
         )
+
+
+def _cors_preflight(origin: str | None) -> HttpResponse:
+    h = _cors_headers(origin)
+    h.update({"Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+              "Access-Control-Allow-Headers": "Content-Type",
+              "Access-Control-Max-Age": "86400"})
+    return HttpResponse(204, b"", h)
 
 
 ALLOWED_ORIGINS = {"https://kotoba-forge.pages.dev", "https://kotoba.46log.com", "https://kotoba.sakamichi-tools.cfd"}
