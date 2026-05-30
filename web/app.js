@@ -836,6 +836,7 @@ function renderJobDetail(job) {
       <div class="metric"><span>${escapeHtml(t("reservedMetric"))}</span><strong>${minutes(job.reserved_minutes)}</strong></div>
       <div class="metric"><span>${escapeHtml(t("consumedMetric"))}</span><strong>${minutes(job.consumed_minutes)}</strong></div>
     </div>
+    ${job.progress_message ? `<p class="progress-msg">${escapeHtml(job.progress_message)}</p>` : ""}
     ${failure}
     ${renderStageProgress(job)}
     <p class="meta">${escapeHtml(job.source_url_redacted || job.source_url || "")}</p>

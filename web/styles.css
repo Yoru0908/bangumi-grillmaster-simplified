@@ -743,3 +743,16 @@ label {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ── Progress message ── */
+.progress-msg {
+  margin: 0.5rem 0;
+  padding: 0.4rem 0.8rem;
+  border-left: 3px solid var(--ember);
+  color: var(--ember-dark);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: rgba(196, 95, 36, 0.08);
+  border-radius: 0 8px 8px 0;
+}

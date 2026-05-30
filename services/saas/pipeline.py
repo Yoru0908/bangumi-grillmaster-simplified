@@ -65,11 +65,45 @@ class WorkflowSubtitlePipeline:
             video_duration_seconds=int(info.duration),
         )
 
-    def run(self, *, job_id: str, source_url: str) -> PipelineResult:
+    def run(self, *, job_id: str, source_url: str, on_stage_change = None) -> PipelineResult:
         try:
             import project as project_module
             import workflow as workflow_module
-            from project import Project
+            from project import ProgressStage, Project
+
+            project_id = Project.parse_source_str(source_url)
+            stop_poll = threading.Event()
+
+            def _poll_stage():
+                stage_map = {
+                    "METADATA_FETCHED": ("metadata_fetched", "获取视频信息完成"),
+                    "DOWNLOADED": ("video_downloaded", "视频下载完成"),
+                    "VIDEO_PROCESSED": ("video_downloaded", "视频合并完成"),
+                    "AUDIO_EXTRACTED": ("audio_extracted", "音频提取完成"),
+                    "ASR_COMPLETED": ("asr_completed", "语音识别完成"),
+                    "PRE_PASS_COMPLETED": ("prepass_completed", "预分析完成"),
+                    "TRANSLATED": ("translated", "翻译中..."),
+                    "STRUCTURE_FIXED": ("structure_fixed", "结构修正完成"),
+                    "FINALIZED": ("finalized", "最终化中..."),
+                }
+                last_stage = ""
+                while not stop_poll.is_set():
+                    try:
+                        pj = self.project_root / "projects" / project_id / "project.json"
+                        if pj.exists():
+                            data = json.loads(pj.read_text())
+                            current = data.get("progress", "")
+                            if current and current != last_stage:
+                                last_stage = current
+                                mapped = stage_map.get(current)
+                                if mapped and on_stage_change:
+                                    on_stage_change(mapped[0], mapped[1])
+                    except Exception:
+                        pass
+                    time.sleep(3)
+
+            if on_stage_change:
+                threading.Thread(target=_poll_stage, daemon=True).start()
 
             with _project_root_override(self.project_root):
                 workflow_module.submit_project(
@@ -80,6 +114,8 @@ class WorkflowSubtitlePipeline:
                     enable_refine=False,
                     enable_cover=False,
                 )
+                if on_stage_change:
+                    stop_poll.set()
                 project = Project.from_source_str(source_url)
                 result = PipelineResult(
                     source_srt_path=str(project.srt_path),
