@@ -33,6 +33,9 @@ def _handler_for(app: SaasHttpApp):
         def do_DELETE(self):
             self._dispatch()
 
+        def do_OPTIONS(self):
+            self._dispatch()
+
         def _dispatch(self):
             length = int(self.headers.get("Content-Length", "0"))
             response = app.handle(

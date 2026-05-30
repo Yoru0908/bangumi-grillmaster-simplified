@@ -92,6 +92,8 @@ class SaasHttpApp:
         body: bytes,
     ) -> HttpResponse:
         now = self.now()
+        if method == "OPTIONS":
+            return _cors_preflight()
         if method == "GET" and path == "/":
             return self._static_file("index.html", "text/html; charset=utf-8")
         if method == "GET" and path == "/app.js":
@@ -333,6 +335,16 @@ class SaasHttpApp:
         )
 
 
+def _cors_preflight() -> HttpResponse:
+    return HttpResponse(204, b"", {
+        "Access-Control-Allow-Origin": "https://kotoba-forge.pages.dev",
+        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+    })
+
+
 def _json_payload(body: bytes) -> dict:
     return json.loads((body or b"{}").decode("utf-8"))
 
@@ -343,7 +355,11 @@ def _json_response(
     *,
     headers: dict[str, str] | None = None,
 ) -> HttpResponse:
-    response_headers = {"Content-Type": "application/json; charset=utf-8"}
+    response_headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "https://kotoba-forge.pages.dev",
+        "Access-Control-Allow-Credentials": "true",
+    }
     if headers:
         response_headers.update(headers)
     return HttpResponse(
