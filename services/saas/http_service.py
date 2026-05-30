@@ -59,35 +59,31 @@ class SaasHttpApp:
         origin = _header(headers, "origin")
         try:
             resp = self._handle(method.upper(), urlparse(path).path, headers, body)
-            cors = _cors_headers(origin)
-            if cors:
-                resp.headers.update(cors)
-            return resp
         except ApiError as exc:
-            return _json_response(
+            resp = _json_response(
                 exc.status_code,
                 {"error": {"code": exc.code, "message": exc.message}},
             )
         except (InvalidCredentials, AccountDisabled) as exc:
-            return _json_response(
+            resp = _json_response(
                 401,
                 {"error": {"code": "AUTH_FAILED", "message": str(exc)}},
             )
         except json.JSONDecodeError:
-            return _json_response(
+            resp = _json_response(
                 400,
                 {"error": {"code": "INVALID_JSON", "message": "Invalid JSON body"}},
             )
         except KeyError as exc:
-            return _json_response(
+            resp = _json_response(
                 400,
-                {
-                    "error": {
-                        "code": "BAD_REQUEST",
-                        "message": f"Missing required field: {exc.args[0]}",
-                    }
-                },
+                {"error": {"code": "BAD_REQUEST", "message": f"Missing required field: {exc.args[0]}"}},
             )
+        if origin:
+            cors = _cors_headers(origin)
+            if cors:
+                resp.headers.update(cors)
+        return resp
 
     def _handle(
         self,

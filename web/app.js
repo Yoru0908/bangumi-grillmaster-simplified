@@ -1312,6 +1312,7 @@ nodes.paidSourceUrl.addEventListener("input", (e) => {
 async function handlePricingClick(e) {
   const card = e.target.closest("[data-plan]");
   if (!card || !state.user) return;
+  console.log("pricing click", card.dataset.plan, state.user);
   try {
     const data = await api("/api/billing/checkout", {
       method: "POST",
