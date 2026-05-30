@@ -94,6 +94,10 @@ class SaasHttpApp:
         now = self.now()
         if method == "GET" and path == "/":
             return self._static_file("index.html", "text/html; charset=utf-8")
+        if method == "GET" and path == "/app.js":
+            return self._static_file("app.js", "text/javascript; charset=utf-8")
+        if method == "GET" and path == "/styles.css":
+            return self._static_file("styles.css", "text/css; charset=utf-8")
         if method == "GET" and path == "/static/app.js":
             return self._static_file("app.js", "text/javascript; charset=utf-8")
         if method == "GET" and path == "/static/styles.css":
