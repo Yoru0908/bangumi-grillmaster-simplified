@@ -407,8 +407,13 @@ def _json_response(
 ) -> HttpResponse:
     response_headers = {"Content-Type": "application/json; charset=utf-8"}
     if headers:
+        response_headers.update(headers)
+    return HttpResponse(
+        status_code,
+        json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        response_headers,
+    )
 
-def _parse_multipart(body: bytes, boundary: str) -> tuple[str, bytes] | None:
     """Extract first file from multipart form data. Returns (filename, content) or None."""
     enc_boundary = boundary.encode()
     parts = body.split(b"--" + enc_boundary)
@@ -430,12 +435,6 @@ def _parse_multipart(body: bytes, boundary: str) -> tuple[str, bytes] | None:
         content = content.rstrip(b"\r\n-")
         return (filename, content)
     return None
-        response_headers.update(headers)
-    return HttpResponse(
-        status_code,
-        json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        response_headers,
-    )
 
 
 def _session_id(headers: dict[str, str]) -> str | None:

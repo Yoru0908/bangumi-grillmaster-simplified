@@ -87,8 +87,8 @@
           <div class="source-input file-input" style="display:none">
             <div class="drop-zone" id="guest-drop-zone">
               <span>拖拽视频到此处</span>
-              <input type="file" id="guest-file-input" accept="video/*" style="display:none">
-              <button type="button" onclick="document.getElementById('guest-file-input').click()">选择文件</button>
+              <label for="guest-file-input" style="display:inline-flex;align-items:center;min-height:44px;border:2px solid var(--line);border-radius:999px;padding:0.7rem 1.15rem;color:var(--cream);background:var(--ink);cursor:pointer;font-family:var(--mono);font-size:0.82rem">选择文件</label>
+              <input type="file" id="guest-file-input" accept="video/*" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
             </div>
             <p class="file-name" id="guest-file-name"></p>
           </div>
