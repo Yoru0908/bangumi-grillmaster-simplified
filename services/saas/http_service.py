@@ -313,12 +313,18 @@ class SaasHttpApp:
         )
         if not path.exists():
             raise ApiError(404, "ARTIFACT_NOT_FOUND", f"artifact not found: {artifact}")
+        # Use video title as download filename
+        from urllib.parse import quote
+        job = self.conn.execute("SELECT video_title FROM jobs WHERE id=?", (job_id,)).fetchone()
+        title = (dict(job).get("video_title") or job_id)[:80] if job else job_id
+        suffix_map = {"original.srt": " 原文.srt", "finalized.srt": " 译文.srt"}
+        filename = title + suffix_map.get(artifact, ".srt")
         return HttpResponse(
             200,
             path.read_bytes(),
             {
                 "Content-Type": "text/plain; charset=utf-8",
-                "Content-Disposition": f'attachment; filename="{artifact}"',
+                "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
             },
         )
 

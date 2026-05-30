@@ -18,8 +18,7 @@ class InvalidJobArtifact(ValueError):
 
 
 ARTIFACT_COLUMNS = {
-    "source.srt": "source_srt_path",
-    "translated.srt": "translated_srt_path",
+    "original.srt": "source_srt_path",
     "finalized.srt": "result_srt_path",
 }
 

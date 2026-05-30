@@ -856,7 +856,11 @@ function failureHint(job) {
 }
 
 function renderDownloads(job) {
-  const artifacts = ["source.srt", "translated.srt", "finalized.srt"];
+  const title = job.video_title || job.id;
+  const downloads = [
+    { key: "original.srt", label: title + " 原文.srt" },
+    { key: "finalized.srt", label: title + " 译文.srt" },
+  ];
   const ready = job.status === "succeeded" || job.stage === "cleanup_completed";
   nodes.downloadLinks.innerHTML = "";
 
@@ -865,11 +869,11 @@ function renderDownloads(job) {
     return;
   }
 
-  artifacts.forEach((artifact) => {
+  downloads.forEach((d) => {
     const link = document.createElement("a");
     link.className = "download-link";
-    link.href = `/api/jobs/${encodeURIComponent(job.id)}/download/${artifact}`;
-    link.textContent = artifact;
+    link.href = `/api/jobs/${encodeURIComponent(job.id)}/download/${d.key}`;
+    link.textContent = d.label;
     nodes.downloadLinks.append(link);
   });
 }
