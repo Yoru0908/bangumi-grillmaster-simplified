@@ -70,6 +70,15 @@ class WorkflowSubtitlePipeline:
 
     def run(self, *, job_id: str, source_url: str, on_stage_change = None) -> PipelineResult:
         try:
+            # Handle uploaded files
+            if source_url.startswith("upload://"):
+                import uuid, shutil, os
+                filename = source_url.replace("upload://", "")
+                project_id = f"upload_{uuid.uuid4().hex[:12]}"
+                # Copy uploaded file to projects dir
+                src = Path(os.environ.get("SAAS_JOB_DATA_DIR", "/tmp")) / "uploads" / job_id / filename
+                return self._run_upload_pipeline(job_id, project_id, src, on_stage_change)
+
             import project as project_module
             import workflow as workflow_module
             from project import ProgressStage, Project
@@ -113,6 +122,30 @@ class WorkflowSubtitlePipeline:
                     source_str=source_url,
                     translation_hint=self.translation_hint,
                     break_after=None,
+    def _run_upload_pipeline(self, job_id, project_id, src_path, on_stage_change):
+        import shutil
+        proj_dir = self.project_root / "projects" / project_id
+        proj_dir.mkdir(parents=True, exist_ok=True)
+        video_path = proj_dir / "video.mp4"
+        if on_stage_change: on_stage_change("video_downloaded", "上传视频就绪")
+        shutil.copy2(str(src_path), str(video_path))
+        if on_stage_change: on_stage_change("audio_extracted", "开始处理...")
+        # Now run the pipeline from audio extraction onward
+        import workflow as workflow_module
+        from project import Project
+        project = Project.from_source_str(project_id)
+        project.mark_progress(project_module.ProgressStage.METADATA_FETCHED)
+        project.mark_progress(project_module.ProgressStage.DOWNLOADED)
+        project.mark_progress(project_module.ProgressStage.VIDEO_PROCESSED)
+        with _project_root_override(self.project_root):
+            # The uploaded file is already at video_path, just continue from audio extraction
+            workflow_module.process_project(project_id)
+        result = PipelineResult(
+            source_srt_path=str(proj_dir / "video.ja.srt"),
+            translated_srt_path=str(proj_dir / "video.cht.srt"),
+            finalized_srt_path=str(proj_dir / "video.cht.finalized.srt"),
+        )
+        return result
                     parent_project_path=self.parent_project_path,
                     enable_refine=False,
                     enable_cover=False,

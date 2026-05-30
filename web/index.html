@@ -76,8 +76,22 @@
         </div>
         <form id="guest-form-static" class="submit-form" onsubmit="return false">
           <label>
+          <div class="source-mode-tabs">
+            <button type="button" class="source-mode active" data-mode="url">粘贴链接</button>
+            <button type="button" class="source-mode" data-mode="file">上传视频</button>
+          </div>
+          <div class="source-input url-input">
             <span>YouTube 链接</span>
             <input id="guest-url-static" name="source_url" type="url" placeholder="https://www.youtube.com/watch?v=..." required>
+          </div>
+          <div class="source-input file-input" style="display:none">
+            <div class="drop-zone" id="guest-drop-zone">
+              <span>拖拽视频到此处</span>
+              <input type="file" id="guest-file-input" accept="video/*" style="display:none">
+              <button type="button" onclick="document.getElementById('guest-file-input').click()">选择文件</button>
+            </div>
+            <p class="file-name" id="guest-file-name"></p>
+          </div>
           </label>
           <button type="submit">启动试炼任务</button>
         </form>
@@ -283,6 +297,6 @@
 
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
-    <script src="/app.js?v=13" defer></script>
+    <script src="/app.js?v=14" defer></script>
   </body>
 </html>

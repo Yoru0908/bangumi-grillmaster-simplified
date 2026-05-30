@@ -257,6 +257,26 @@ class SaasHttpApp:
                 base_url=payload.get("base_url", ""),
             )
             return _json_response(200, {"url": url})
+        if method == "POST" and path == "/api/upload":
+            user = self.api._require_user(_session_id(headers), now=now)
+            content_type = _header(headers, "content-type") or ""
+            if "multipart/form-data" not in content_type:
+                raise ApiError(400, "BAD_REQUEST", "Expected multipart/form-data")
+            boundary = content_type.split("boundary=")[-1].strip()
+            if not boundary:
+                raise ApiError(400, "BAD_REQUEST", "Missing multipart boundary")
+            # Parse multipart manually
+            file_data = _parse_multipart(body, boundary)
+            if not file_data:
+                raise ApiError(400, "BAD_REQUEST", "No file uploaded")
+            filename, content = file_data
+            job_id = self.api.submit_upload_job(
+                session_id=_session_id(headers),
+                filename=filename,
+                file_content=content,
+                now=now,
+            )
+            return _json_response(200, {"job_id": job_id, "status": "queued", "stage": "created"})
         if method == "POST" and path == "/api/billing/webhook":
             from services.saas.stripe_handler import handle_webhook
             sig = _header(headers, "stripe-signature")
@@ -387,6 +407,29 @@ def _json_response(
 ) -> HttpResponse:
     response_headers = {"Content-Type": "application/json; charset=utf-8"}
     if headers:
+
+def _parse_multipart(body: bytes, boundary: str) -> tuple[str, bytes] | None:
+    """Extract first file from multipart form data. Returns (filename, content) or None."""
+    enc_boundary = boundary.encode()
+    parts = body.split(b"--" + enc_boundary)
+    for part in parts:
+        if b"Content-Disposition" not in part:
+            continue
+        headers_end = part.find(b"\r\n\r\n")
+        if headers_end == -1:
+            continue
+        headers = part[:headers_end].decode("utf-8", errors="ignore")
+        if "filename=" not in headers:
+            continue
+        # Extract filename
+        import re
+        m = re.search(r'filename="([^"]*)"', headers)
+        filename = m.group(1) if m else "uploaded.mp4"
+        content = part[headers_end + 4:]
+        # Strip trailing \r\n and boundary markers
+        content = content.rstrip(b"\r\n-")
+        return (filename, content)
+    return None
         response_headers.update(headers)
     return HttpResponse(
         status_code,

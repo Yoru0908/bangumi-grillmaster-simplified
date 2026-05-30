@@ -1307,6 +1307,33 @@ nodes.playgroundSourceUrl.addEventListener("input", (e) => {
 });
 nodes.paidSourceUrl.addEventListener("input", (e) => {
   estimateCost(e.target.value.trim(), "paid");
+// Source mode tabs + upload
+document.querySelectorAll(".source-mode-tabs").forEach(tabs => {
+  tabs.addEventListener("click", (e) => {
+    const btn = e.target.closest(".source-mode");
+    if (!btn) return;
+    const container = tabs.parentElement;
+    container.querySelectorAll(".source-mode").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const isFile = btn.dataset.mode === "file";
+    container.querySelector(".url-input").style.display = isFile ? "none" : "";
+    container.querySelector(".file-input").style.display = isFile ? "" : "none";
+  });
+});
+// Drop zone
+const dz = document.getElementById("guest-drop-zone");
+const fi = document.getElementById("guest-file-input");
+if (dz && fi) {
+  dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag-over"); });
+  dz.addEventListener("dragleave", () => dz.classList.remove("drag-over"));
+  dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("drag-over"); fi.files = e.dataTransfer.files; updateFileName(); });
+  fi.addEventListener("change", updateFileName);
+}
+function updateFileName() {
+  const f = document.getElementById("guest-file-input")?.files?.[0];
+  const el = document.getElementById("guest-file-name");
+  if (el) el.textContent = f ? f.name : "";
+}
 });
 
 // Pricing grid click: copy top-up message

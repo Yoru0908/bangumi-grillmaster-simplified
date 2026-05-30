@@ -97,6 +97,26 @@ class SaasApiService:
         )
         return {"job_id": job_id, "status": "queued", "stage": "created"}
 
+    def submit_upload_job(
+        self,
+        *,
+        session_id: str | None,
+        filename: str,
+        file_content: bytes,
+        now: str,
+    ) -> dict:
+        user = self._require_user(session_id, now=now)
+        if user.role != "admin" and self._balance(user.id) < self.min_submit_credit_minutes:
+            raise ApiError(400, "INSUFFICIENT_CREDITS", "Not enough credits to submit a job")
+        import os
+        from services.saas.jobs import JobStore
+        store = JobStore(self.conn)
+        job_id = store.create_job(user_id=user.id, source_url=f"upload://{filename}", now=now, job_type="upload")
+        upload_dir = Path(os.environ.get("SAAS_JOB_DATA_DIR", "/tmp")) / "uploads" / job_id
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        (upload_dir / filename).write_bytes(file_content)
+        return {"job_id": job_id, "status": "queued", "stage": "created"}
+
     def submit_playground_job_anonymous(
         self,
         *,
