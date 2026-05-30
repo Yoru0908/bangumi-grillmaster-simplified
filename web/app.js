@@ -689,6 +689,7 @@ async function loadWorkspace() {
 }
 
 function renderSignedOut() {
+  document.getElementById("hero-logout").classList.add("is-hidden");
   const landing = document.querySelector(".landing"); if (landing) landing.style.display = "";
   stopPolling();
   renderGuestPlayground();
