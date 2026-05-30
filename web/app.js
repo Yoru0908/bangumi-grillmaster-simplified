@@ -877,11 +877,12 @@ function renderDownloads(job) {
     btn.textContent = d.label;
     btn.addEventListener("click", async () => {
       const resp = await api(`/api/jobs/${encodeURIComponent(job.id)}/download/${d.key}`);
-      const blob = new Blob([resp], { type: "text/plain; charset=utf-8" });
+      const downloadName = `${title} ${d.label}`;
+      const blob = new Blob([resp], { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = d.label;
+      a.download = downloadName;
       a.click();
       URL.revokeObjectURL(url);
     });
