@@ -296,7 +296,7 @@ class SaasHttpApp:
         )
         cookie = (
             f"session_id={result.session['id']}; Path=/; HttpOnly; "
-            "SameSite=Lax"
+            "SameSite=None; Secure"
         )
         self.last_login_cookie = cookie
         return _json_response(
@@ -313,7 +313,7 @@ class SaasHttpApp:
             200,
             {"ok": True},
             headers={
-                "Set-Cookie": "session_id=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+                "Set-Cookie": "session_id=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0"
             },
         )
 
