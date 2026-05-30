@@ -3,11 +3,41 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kotoba Forge</title>
-    <link rel="stylesheet" href="/styles.css">
+    <title>SubForge — 日综字幕 AI 锻造工房</title>
+    <link rel="stylesheet" href="/styles.css?v=2">
   </head>
   <body>
     <main class="shell">
+
+      <!-- ═══ Landing ═══ -->
+      <section class="landing">
+        <div class="landing-hero">
+          <h1 class="landing-title">日综字幕，<em>AI 锻造</em></h1>
+          <p class="landing-lede">贴上 YouTube 链接，ElevenLabs 级语音识别 + Gemini 翻译，几分钟出 SRT 字幕。</p>
+          <p class="landing-cta-row">
+            <a href="#playground-guest-static" class="landing-cta">免费试用 →</a>
+            <span class="landing-cta-sub">无需注册，1 分钟以内视频免费</span>
+          </p>
+        </div>
+        <div class="landing-features">
+          <article>
+            <span class="feature-icon">🎙</span>
+            <h3>ElevenLabs Scribe</h3>
+            <p>多人对话、喧哗吐槽中精准识别每位说话人，日综场景优化。</p>
+          </article>
+          <article>
+            <span class="feature-icon">🧠</span>
+            <h3>Gemini 翻译</h3>
+            <p>结合视频画面+音频多模态理解，抓住综艺梗和语气，逐句翻译。</p>
+          </article>
+          <article>
+            <span class="feature-icon">📥</span>
+            <h3>SRT 即下即用</h3>
+            <p>原文 + 译文双份 SRT，直接拖进播放器，支持 PotPlayer/IINA/VLC。</p>
+          </article>
+        </div>
+      </section>
+
       <!-- ═══ Hero (always visible) ═══ -->
       <header class="hero" aria-labelledby="page-title">
         <div>
@@ -111,7 +141,6 @@
 
         <!-- ═══ Tab: Work ═══ -->
         <section class="tab-panel" id="panel-work" role="tabpanel" aria-labelledby="tab-work">
-          <!-- Submit + account bar -->
           <div class="work-top-bar">
             <section class="panel paid-workspace-panel" id="paid-workspace-panel" aria-labelledby="paid-workspace-title">
               <div>
@@ -131,7 +160,6 @@
             </section>
           </div>
 
-          <!-- Left | Right split -->
           <div class="work-split">
             <div class="work-left">
               <section class="panel jobs-panel" aria-labelledby="jobs-title">
@@ -242,6 +270,6 @@
 
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
-    <script src="/app.js?v=5" defer></script>
+    <script src="/app.js?v=6" defer></script>
   </body>
 </html>
