@@ -107,17 +107,18 @@ def _clean_line(line: str) -> str:
     return line.replace("。", "，")
 
 
-_MAX_SINGLE_LINE_CHARS = 30
-
-
 def _merge_short_lines(text: str) -> str:
-    """Merge unnecessary line breaks when the whole text fits on one line."""
+    """Merge line breaks unless text uses dialogue prefix."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     if "\n" not in normalized:
         return text
-    plain = normalized.replace("\n", "")
-    if len(plain) <= _MAX_SINGLE_LINE_CHARS:
-        return plain
+    # Keep line breaks only for dialogue format: lines starting with "-"
+    lines = normalized.split("\n")
+    has_dialogue = any(line.strip().startswith("-") for line in lines)
+    if has_dialogue:
+        return text
+    # Merge everything else into single line
+    plain = "".join(line.strip() for line in lines)
     return text
 
 
