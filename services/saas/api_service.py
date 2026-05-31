@@ -384,13 +384,14 @@ class SaasApiService:
     def grant_credits_from_stripe(self, user_id: str, minutes: int) -> None:
         """Grant credits from Stripe payment. Idempotent per stripe session."""
         from services.saas.credits import CreditLedger
+        from datetime import datetime, timezone
         import uuid as _uuid
         CreditLedger(self.conn).grant(
             user_id=user_id,
             minutes=float(minutes),
             reason=f"stripe top-up: {minutes}min",
             idempotency_key=f"stripe:{user_id}:{_uuid.uuid4().hex[:12]}",
-            created_at=self.now(),
+            created_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         )
 
     def _require_user(self, session_id: str | None, *, now: str) -> CurrentUser:
