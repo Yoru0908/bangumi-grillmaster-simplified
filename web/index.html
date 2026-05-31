@@ -161,10 +161,24 @@
                 <p class="panel-copy" data-i18n="paidWorkspaceCopy">Use credits for real jobs with full pipeline processing and downloadable SRT files.</p>
               </div>
               <form id="paid-job-form" class="submit-form">
+                <div class="source-mode-tabs">
+                  <button type="button" class="source-mode active" data-mode="url">粘贴链接</button>
+                  <button type="button" class="source-mode" data-mode="file">上传视频</button>
+                </div>
+                <div class="source-input url-input">
                 <label>
                   <span data-i18n="sourceUrlLabel">YouTube URL</span>
                   <input id="paid-source-url" name="source_url" type="url" placeholder="https://www.youtube.com/watch?v=..." data-i18n-placeholder="sourceUrlPlaceholder" required>
                 </label>
+                </div>
+                <div class="source-input file-input" style="display:none">
+                  <div class="drop-zone" id="paid-drop-zone">
+                    <span>拖拽视频到此处</span>
+                    <label for="paid-file-input" style="display:inline-flex;align-items:center;min-height:44px;border:2px solid var(--line);border-radius:999px;padding:0.7rem 1.15rem;color:var(--cream);background:var(--ink);cursor:pointer;font-family:var(--mono);font-size:0.82rem">选择文件</label>
+                    <input type="file" id="paid-file-input" accept="video/*" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+                  </div>
+                  <p class="file-name" id="paid-file-name"></p>
+                </div>
                 <p id="paid-estimate" class="estimate-line is-hidden"></p>
                 <p id="paid-status-message" class="provider-warning is-hidden" aria-live="polite"></p>
                 <button type="submit" class="primary" data-i18n="paidButton">Use credits</button>

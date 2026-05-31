@@ -567,12 +567,15 @@ function applyTranslations() {
 const API_BASE = "https://kotoba.sakamichi-tools.cfd";
 
 async function api(path, options = {}) {
+  const isFormData = options.body instanceof FormData;
   const response = await fetch(API_BASE + path, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    ...(isFormData ? {} : {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    }),
     ...options,
   });
 
@@ -729,10 +732,31 @@ async function submitJob(event, kind) {
 
   setBusy(form, true);
   try {
-    const data = await api(endpoint, {
-      method: "POST",
-      body: JSON.stringify({ source_url: sourceInput.value.trim() }),
-    });
+    let data;
+    // Check if file mode is active
+    const container = form.closest(".panel") || form;
+    const fileModeBtn = container.querySelector(".source-mode[data-mode=\"file\"].active");
+    if (kind === "paid" && fileModeBtn) {
+      const fileInput = document.getElementById("paid-file-input");
+      const file = fileInput?.files?.[0];
+      if (!file) {
+        showToast("请先选择视频文件");
+        setBusy(form, false);
+        return;
+      }
+      const fd = new FormData();
+      fd.append("file", file);
+      data = await api("/api/upload", {
+        method: "POST",
+        body: fd,
+        headers: {}, // let browser set Content-Type for multipart
+      });
+    } else {
+      data = await api(endpoint, {
+        method: "POST",
+        body: JSON.stringify({ source_url: sourceInput.value.trim() }),
+      });
+    }
     state.selectedJobId = data.job_id;
     form.reset();
     await Promise.all([loadBilling().catch(() => null), loadJobs()]);
@@ -1354,6 +1378,21 @@ document.getElementById("pricing-grid")?.addEventListener("click", handlePricing
 document.getElementById("subscription-grid")?.addEventListener("click", handlePricingClick);
 
 // Checkout success toast
+// Paid workspace: drop zone + file name
+const pdz = document.getElementById("paid-drop-zone");
+const pfi = document.getElementById("paid-file-input");
+if (pdz && pfi) {
+  pdz.addEventListener("dragover", e => { e.preventDefault(); pdz.classList.add("drag-over"); });
+  pdz.addEventListener("dragleave", () => pdz.classList.remove("drag-over"));
+  pdz.addEventListener("drop", e => { e.preventDefault(); pdz.classList.remove("drag-over"); pfi.files = e.dataTransfer.files; updatePaidFileName(); });
+  pfi.addEventListener("change", updatePaidFileName);
+}
+function updatePaidFileName() {
+  const f = pfi?.files?.[0];
+  const el = document.getElementById("paid-file-name");
+  if (el) el.textContent = f ? f.name : "";
+}
+
 if (window.location.search.includes("checkout=success")) {
   setTimeout(() => {
     const plan = new URLSearchParams(window.location.search).get("plan") || "";
