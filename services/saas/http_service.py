@@ -124,6 +124,13 @@ class SaasHttpApp:
                     now=now,
                 ),
             )
+        if method == "GET" and path == "/api/estimate":
+            return _json_response(200, self.api.estimate_cost(
+                session_id=_session_id(headers),
+            query = _parse_query(path)
+                source_url=query.get("source_url", ""),
+                now=now,
+            ))
         if method == "POST" and path == "/api/playground/jobs":
             payload = _json_payload(body)
             return _json_response(
@@ -461,6 +468,12 @@ def _session_id(headers: dict[str, str]) -> str | None:
     cookie.load(cookie_header)
     morsel = cookie.get("session_id")
     return morsel.value if morsel else None
+
+
+def _parse_query(path: str) -> dict:
+    if "?" not in path:
+        return {}
+    return dict(p.split("=", 1) for p in path.split("?")[1].split("&") if "=" in p)
 
 
 def _header(headers: dict[str, str], name: str) -> str | None:

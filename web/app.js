@@ -717,7 +717,7 @@ async function loadBilling() {
   nodes.heroBalanceMinutes.textContent = Number(billing.balance_minutes || 0).toFixed(1);
   nodes.heroBalance.classList.remove("is-hidden");
   renderProviderStatus();
-  if (billing.ledger) renderLedger(billing.ledger);
+  if (billing.recent_ledger) renderLedger(billing.recent_ledger);
 }
 
 async function submitJob(event, kind) {
@@ -744,7 +744,8 @@ async function submitJob(event, kind) {
         method: "POST",
         body: JSON.stringify({ filename: file.name }),
       });
-      await fetch(presign.upload_url, { method: "PUT", body: file });
+      const r2resp = await fetch(presign.upload_url, { method: "PUT", body: file });
+      if (!r2resp.ok) throw new Error("R2 upload failed: " + r2resp.status);
       data = await api("/api/jobs/r2", {
         method: "POST",
         body: JSON.stringify({ r2_key: presign.key, filename: file.name }),

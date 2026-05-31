@@ -99,6 +99,15 @@ class SaasApiService:
         )
         return {"job_id": job_id, "status": "queued", "stage": "created"}
 
+    def estimate_cost(self, *, session_id, source_url, now):
+        self._require_user(session_id, now=now)
+        _validate_public_url(source_url)
+        try:
+            metadata = WorkflowSubtitlePipeline().fetch_metadata(source_url)
+            return {"duration_seconds": metadata.video_duration_seconds}
+        except Exception:
+            return {"duration_seconds": 300}
+
     def submit_upload_job(
         self,
         *,
