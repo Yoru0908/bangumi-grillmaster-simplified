@@ -270,13 +270,13 @@ class SaasHttpApp:
             if not file_data:
                 raise ApiError(400, "BAD_REQUEST", "No file uploaded")
             filename, content = file_data
-            job_id = self.api.submit_upload_job(
+            result = self.api.submit_upload_job(
                 session_id=_session_id(headers),
                 filename=filename,
                 file_content=content,
                 now=now,
             )
-            return _json_response(200, {"job_id": job_id, "status": "queued", "stage": "created"})
+            return _json_response(200, result)
         if method == "POST" and path == "/api/billing/webhook":
             from services.saas.stripe_handler import handle_webhook
             sig = _header(headers, "stripe-signature")
