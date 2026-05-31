@@ -1074,9 +1074,8 @@ async function adjustCredits(event) {
 function startPolling() {
   stopPolling();
   state.pollTimer = window.setInterval(async () => {
-    if (!state.user) {
-      return;
-    }
+    if (!state.user) { return; }
+    await loadBilling().catch(() => null);
     await loadJobs();
     if (state.selectedJobId) {
       await selectJob(state.selectedJobId);
@@ -1353,6 +1352,14 @@ async function handlePricingClick(e) {
 }
 document.getElementById("pricing-grid")?.addEventListener("click", handlePricingClick);
 document.getElementById("subscription-grid")?.addEventListener("click", handlePricingClick);
+
+// Checkout success toast
+if (window.location.search.includes("checkout=success")) {
+  setTimeout(() => {
+    const plan = new URLSearchParams(window.location.search).get("plan") || "";
+    showToast(`支付成功！${plan} 套餐额度将在几秒内到账。`);
+  }, 1000);
+}
 
 applyTranslations();
 initGuestPlayground();

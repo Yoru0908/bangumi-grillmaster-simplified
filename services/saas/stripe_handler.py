@@ -76,7 +76,7 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
         except Exception as e:
             logger.warning(f"Webhook signature verification failed: {e}")
 
-    # If verification failed or skipped, try parsing event without verification
+    # If verification failed or skipped, parse as raw JSON
     if event is None:
         import json
         try:
@@ -86,10 +86,13 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
             logger.error(f"Failed to parse webhook payload: {e}")
             return {"status": "parse_error"}
 
-    event_type = event.get("type", "") if isinstance(event, dict) else event["type"]
+    # Convert to dict for safe .get() access (Stripe objects don't have .get)
+    d = event.to_dict() if hasattr(event, "to_dict") else event if isinstance(event, dict) else {}
+    event_type = d.get("type", "")
+    logger.info(f"Webhook event type: {event_type}")
 
     if event_type == "checkout.session.completed":
-        obj = event.get("data", {}).get("object", {}) if isinstance(event, dict) else event["data"]["object"]
+        obj = d.get("data", {}).get("object", {})
         metadata = obj.get("metadata", {})
         plan_key = metadata.get("plan_key", "")
         minutes = int(metadata.get("minutes", "0"))
@@ -98,7 +101,7 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
         return {"status": "ok", "user_id": user_id, "minutes": minutes}
 
     if event_type == "invoice.paid":
-        obj = event.get("data", {}).get("object", {}) if isinstance(event, dict) else event["data"]["object"]
+        obj = d.get("data", {}).get("object", {})
         metadata = obj.get("metadata", {})
         plan_key = metadata.get("plan_key", "")
         minutes = int(metadata.get("minutes", "0"))
@@ -106,4 +109,5 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
         logger.info(f"Stripe invoice paid: user={user_id} plan={plan_key} minutes={minutes}")
         return {"status": "ok", "user_id": user_id, "minutes": minutes}
 
+    logger.info(f"Unhandled webhook event: {event_type}")
     return {"status": "unhandled_event", "type": event_type}
