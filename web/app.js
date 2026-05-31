@@ -575,7 +575,9 @@ async function api(path, options = {}) {
   if (!isFormData && !fetchOpts.headers) {
     fetchOpts.headers = { "Content-Type": "application/json" };
   }
+  if (isFormData) console.log(">>> UPLOAD fetch", API_BASE + path, "headers:", fetchOpts.headers);
   const response = await fetch(API_BASE + path, fetchOpts);
+  if (isFormData) console.log(">>> UPLOAD response", response.status, response.headers.get("Content-Type"));
 
   if (response.status === 204) {
     return {};
