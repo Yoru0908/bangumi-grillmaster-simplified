@@ -461,3 +461,25 @@ def _utc_now() -> str:
 def _days_after(value: str, days: int) -> str:
     base = datetime.fromisoformat(value.replace("Z", "+00:00"))
     return (base + timedelta(days=days)).isoformat().replace("+00:00", "Z")
+
+
+def _parse_multipart(body: bytes, boundary: str) -> tuple[str, bytes] | None:
+    """Extract first file from multipart form data. Returns (filename, content) or None."""
+    import re
+    enc_boundary = boundary.encode()
+    parts = body.split(b"--" + enc_boundary)
+    for part in parts:
+        if b"Content-Disposition" not in part:
+            continue
+        headers_end = part.find(b"\r\n\r\n")
+        if headers_end == -1:
+            continue
+        headers = part[:headers_end].decode("utf-8", errors="ignore")
+        if "filename=" not in headers:
+            continue
+        m = re.search(r'filename="([^"]*)"', headers)
+        filename = m.group(1) if m else "uploaded.mp4"
+        content = part[headers_end + 4:]
+        content = content.rstrip(b"\r\n-")
+        return (filename, content)
+    return None

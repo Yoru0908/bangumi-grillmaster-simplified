@@ -568,16 +568,17 @@ const API_BASE = "https://kotoba.sakamichi-tools.cfd";
 
 async function api(path, options = {}) {
   const isFormData = options.body instanceof FormData;
-  const response = await fetch(API_BASE + path, {
+  const fetchOpts = {
     credentials: "include",
-    ...(isFormData ? {} : {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
-    }),
     ...options,
-  });
+  };
+  if (!isFormData) {
+    fetchOpts.headers = {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    };
+  }
+  const response = await fetch(API_BASE + path, fetchOpts);
 
   if (response.status === 204) {
     return {};
@@ -734,8 +735,7 @@ async function submitJob(event, kind) {
   try {
     let data;
     // Check if file mode is active
-    const container = form.closest(".panel") || form;
-    const fileModeBtn = container.querySelector(".source-mode[data-mode=\"file\"].active");
+    const fileModeBtn = form.querySelector(".source-mode[data-mode=\"file\"].active");
     if (kind === "paid" && fileModeBtn) {
       const fileInput = document.getElementById("paid-file-input");
       const file = fileInput?.files?.[0];
@@ -747,9 +747,8 @@ async function submitJob(event, kind) {
       const fd = new FormData();
       fd.append("file", file);
       data = await api("/api/upload", {
-        method: "POST",
         body: fd,
-        headers: {}, // let browser set Content-Type for multipart
+        method: "POST",
       });
     } else {
       data = await api(endpoint, {
@@ -1330,6 +1329,7 @@ nodes.playgroundSourceUrl.addEventListener("input", (e) => {
 });
 nodes.paidSourceUrl.addEventListener("input", (e) => {
   estimateCost(e.target.value.trim(), "paid");
+});
 // Source mode tabs + upload
 document.querySelectorAll(".source-mode-tabs").forEach(tabs => {
   tabs.addEventListener("click", (e) => {
@@ -1341,6 +1341,9 @@ document.querySelectorAll(".source-mode-tabs").forEach(tabs => {
     const isFile = btn.dataset.mode === "file";
     container.querySelector(".url-input").style.display = isFile ? "none" : "";
     container.querySelector(".file-input").style.display = isFile ? "" : "none";
+    // Toggle required on URL input to avoid browser validation conflict
+    const urlInput = container.querySelector("input[type='url']");
+    if (urlInput) urlInput.required = !isFile;
   });
 });
 // Drop zone
@@ -1357,8 +1360,21 @@ function updateFileName() {
   const el = document.getElementById("guest-file-name");
   if (el) el.textContent = f ? f.name : "";
 }
-});
 
+// Paid drop zone
+const paidDz = document.getElementById("paid-drop-zone");
+const paidFi = document.getElementById("paid-file-input");
+if (paidDz && paidFi) {
+  paidDz.addEventListener("dragover", e => { e.preventDefault(); paidDz.classList.add("drag-over"); });
+  paidDz.addEventListener("dragleave", () => paidDz.classList.remove("drag-over"));
+  paidDz.addEventListener("drop", e => { e.preventDefault(); paidDz.classList.remove("drag-over"); paidFi.files = e.dataTransfer.files; updatePaidFileName(); });
+  paidFi.addEventListener("change", updatePaidFileName);
+}
+function updatePaidFileName() {
+  const f = paidFi?.files?.[0];
+  const el = document.getElementById("paid-file-name");
+  if (el) el.textContent = f ? f.name : "";
+}
 // Pricing grid click: copy top-up message
 async function handlePricingClick(e) {
   const card = e.target.closest("[data-plan]");
@@ -1378,20 +1394,6 @@ document.getElementById("pricing-grid")?.addEventListener("click", handlePricing
 document.getElementById("subscription-grid")?.addEventListener("click", handlePricingClick);
 
 // Checkout success toast
-// Paid workspace: drop zone + file name
-const pdz = document.getElementById("paid-drop-zone");
-const pfi = document.getElementById("paid-file-input");
-if (pdz && pfi) {
-  pdz.addEventListener("dragover", e => { e.preventDefault(); pdz.classList.add("drag-over"); });
-  pdz.addEventListener("dragleave", () => pdz.classList.remove("drag-over"));
-  pdz.addEventListener("drop", e => { e.preventDefault(); pdz.classList.remove("drag-over"); pfi.files = e.dataTransfer.files; updatePaidFileName(); });
-  pfi.addEventListener("change", updatePaidFileName);
-}
-function updatePaidFileName() {
-  const f = pfi?.files?.[0];
-  const el = document.getElementById("paid-file-name");
-  if (el) el.textContent = f ? f.name : "";
-}
 
 if (window.location.search.includes("checkout=success")) {
   setTimeout(() => {
