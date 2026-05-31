@@ -738,16 +738,16 @@ async function submitJob(event, kind) {
     if (kind === "paid" && fileModeBtn) {
       const fileInput = document.getElementById("paid-file-input");
       const file = fileInput?.files?.[0];
-      if (!file) {
-        showToast("请先选择视频文件");
-        setBusy(form, false);
-        return;
-      }
-      const fd = new FormData();
-      fd.append("file", file);
-      data = await api("/api/upload", {
-        body: fd,
+      if (!file) { showToast("请先选择视频文件"); setBusy(form, false); return; }
+      // R2 presigned upload
+      const presign = await api("/api/upload/r2/presign", {
         method: "POST",
+        body: JSON.stringify({ filename: file.name }),
+      });
+      await fetch(presign.upload_url, { method: "PUT", body: file });
+      data = await api("/api/jobs/r2", {
+        method: "POST",
+        body: JSON.stringify({ r2_key: presign.key, filename: file.name }),
       });
     } else {
       data = await api(endpoint, {

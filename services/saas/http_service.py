@@ -257,6 +257,22 @@ class SaasHttpApp:
                 base_url=payload.get("base_url", ""),
             )
             return _json_response(200, {"url": url})
+        if method == "POST" and path == "/api/upload/r2/presign":
+            user = self.api._require_user(_session_id(headers), now=now)
+            payload = _json_payload(body)
+            from services.saas.r2 import generate_presigned_upload
+            result = generate_presigned_upload(payload.get("filename", "upload.mp4"))
+            return _json_response(200, result)
+        if method == "POST" and path == "/api/jobs/r2":
+            user = self.api._require_user(_session_id(headers), now=now)
+            payload = _json_payload(body)
+            result = self.api.submit_r2_job(
+                session_id=_session_id(headers),
+                r2_key=payload["r2_key"],
+                filename=payload.get("filename", "video.mp4"),
+                now=now,
+            )
+            return _json_response(200, result)
         if method == "POST" and path == "/api/upload":
             user = self.api._require_user(_session_id(headers), now=now)
             content_type = _header(headers, "content-type") or ""

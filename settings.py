@@ -146,6 +146,12 @@ class Settings(BaseSettings):
         default=False,
         description="Enable optional Codex-driven cover image stylization (runs async after DOWNLOADED, joined before archive). Skipped entirely when break_after is set.",
     )
+    # --- R2 upload -------------------------------------------------------------
+    r2_access_key_id: str | None = Field(default=None)
+    r2_secret_access_key: str | None = Field(default=None)
+    r2_endpoint_url: str | None = Field(default=None)
+    r2_bucket: str = Field(default="kotoba-forge-uploads")
+
     # --- Stripe billing --------------------------------------------------------
     stripe_secret_key: str | None = Field(
         default=None,

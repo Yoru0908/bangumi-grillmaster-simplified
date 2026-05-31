@@ -119,10 +119,7 @@ def connect_database(path: str | Path) -> sqlite3.Connection:
 
 
 def initialize_database(conn: sqlite3.Connection) -> None:
-    try:
-        conn.execute("PRAGMA journal_mode=WAL")
-    except Exception:
-        pass  # already set by another connection
+    # journal_mode=WAL already set by connect_database
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=5000")
     conn.executescript(SCHEMA_SQL)

@@ -137,6 +137,7 @@ class SingleJobWorker:
                     pass
             result = self.pipeline.run(
                 job_id=job_id, source_url=source_url, on_stage_change=_on_stage,
+                job_data_dir=str(self.job_data_dir),
             )
         except PipelineError as exc:
             if not is_trial:

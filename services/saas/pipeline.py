@@ -68,12 +68,12 @@ class WorkflowSubtitlePipeline:
             video_duration_seconds=int(info.duration),
         )
 
-    def run(self, *, job_id: str, source_url: str, on_stage_change = None) -> PipelineResult:
+    def run(self, *, job_id: str, source_url: str, on_stage_change = None, job_data_dir: str = "/tmp") -> PipelineResult:
         try:
             # Handle uploaded files
             if source_url.startswith("upload://"):
                 import shutil, os
-                upload_dir = Path(os.environ.get("SAAS_JOB_DATA_DIR", "/tmp")) / "uploads" / job_id
+                upload_dir = Path(job_data_dir) / "uploads" / job_id
                 files = list(upload_dir.glob("*"))
                 if not files:
                     raise PipelineError("UPLOAD_MISSING", "Uploaded file not found")
