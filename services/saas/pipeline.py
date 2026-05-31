@@ -144,16 +144,49 @@ class WorkflowSubtitlePipeline:
         return result
 
     def _do_upload_pipeline(self, project_id, src_path, on_stage_change):
-        import shutil
-        import workflow as workflow_module
-        from project import Project
+        import shutil, os
+        import workflow as workflow_module, project as project_module
+        from project import Project, ProgressStage
+        import ffmpeg
         proj_dir = self.project_root / "projects" / project_id
         proj_dir.mkdir(parents=True, exist_ok=True)
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["/opt/homebrew/bin/ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(src_path)],
+                capture_output=True, text=True, timeout=10
+            )
+            has_video = result.stdout.strip() == "video"
+            if not has_video:
+                raise PipelineError(
+                    "AUDIO_ONLY",
+                    "暂不支持纯音频文件。上传带画面的视频。"
+                )
+        except FileNotFoundError:
+            pass  # ffprobe not available, assume video
         video_path = proj_dir / "video.mp4"
-        if on_stage_change: on_stage_change("video_downloaded", "上传视频已就绪")
         shutil.copy2(str(src_path), str(video_path))
-        with _project_root_override(self.project_root):
-            # Process directly — video already exists
+        if on_stage_change: on_stage_change("video_downloaded", "文件已就绪")
+        # Get video duration via ffprobe
+        dur = 600  # default 10min
+        try:
+            probe = ffmpeg.probe(str(video_path))
+            dur = int(float(probe["format"]["duration"]))
+        except Exception:
+            pass
+        # Pretend it was downloaded from a URL so process_project skips download
+        # Manually set project state via JSON to bypass pydantic setters
+        import json as _json
+        state_path = proj_dir / "project.json"
+        _json.dump({
+            "id": project_id,
+            "progress": "VIDEO_PROCESSED",
+            "is_metadata_fetched": True,
+            "is_downloaded": True,
+            "is_video_processed": True,
+            "downloaded_video_paths": [str(video_path)],
+        }, state_path.open("w"))
+        with _project_root_override(str(proj_dir.parent)):
             workflow_module.process_project(project_id)
         return PipelineResult(
             source_srt_path=str(proj_dir / "video.ja.srt"),
