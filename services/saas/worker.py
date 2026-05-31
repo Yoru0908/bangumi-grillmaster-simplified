@@ -10,7 +10,7 @@ from services.saas.cleanup import CleanupService
 from services.saas.credits import CreditLedger, InsufficientCredits
 from services.saas.api_service import ApiError, _validate_public_url
 from services.saas.jobs import JobStore
-from services.saas.pipeline import PipelineError, SubtitlePipeline
+from services.saas.pipeline import PipelineError, PipelineMetadata, SubtitlePipeline
 
 
 class SingleJobWorker:
@@ -39,8 +39,11 @@ class SingleJobWorker:
         user_id = claimed["user_id"]
         is_trial = claimed.get("job_type") == "trial"
 
+        is_upload = source_url.startswith("upload://")
+
         try:
-            _validate_public_url(source_url)
+            if not is_upload:
+                _validate_public_url(source_url)
         except ApiError as exc:
             self._mark_failed(
                 job_id=job_id,
@@ -51,7 +54,8 @@ class SingleJobWorker:
             return True
 
         try:
-            metadata = self.pipeline.fetch_metadata(source_url)
+            if not is_upload:
+                metadata = self.pipeline.fetch_metadata(source_url)
         except PipelineError as exc:
             self._mark_failed(
                 job_id=job_id,
@@ -60,6 +64,20 @@ class SingleJobWorker:
                 now=now,
             )
             return True
+
+        if is_upload:
+            metadata = PipelineMetadata(
+                video_title=source_url.replace("upload://", ""),
+                video_duration_seconds=600,  # 10 min default, adjusted after processing
+            )
+            # Update job with metadata
+            self._mark_metadata_fetched(
+                job_id=job_id,
+                title=metadata.video_title,
+                duration_seconds=metadata.video_duration_seconds,
+                now=now,
+            )
+
         duration_minutes = _duration_minutes(metadata.video_duration_seconds)
         self._mark_metadata_fetched(
             job_id=job_id,

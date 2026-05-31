@@ -572,11 +572,8 @@ async function api(path, options = {}) {
     credentials: "include",
     ...options,
   };
-  if (!isFormData) {
-    fetchOpts.headers = {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    };
+  if (!isFormData && !fetchOpts.headers) {
+    fetchOpts.headers = { "Content-Type": "application/json" };
   }
   const response = await fetch(API_BASE + path, fetchOpts);
 
