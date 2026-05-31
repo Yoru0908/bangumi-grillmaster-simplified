@@ -379,7 +379,7 @@ def _cors_preflight(origin: str | None) -> HttpResponse:
     h = _cors_headers(origin)
     h.update({"Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
               "Access-Control-Allow-Headers": "Content-Type",
-              "Access-Control-Max-Age": "86400"})
+              "Access-Control-Max-Age": "300"})
     return HttpResponse(204, b"", h)
 
 
