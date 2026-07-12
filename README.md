@@ -1,78 +1,107 @@
-# Bangumi GrillMaster
+# Bangumi GrillMaster (Simplified)
 
-> Fork 說明：本 fork 僅將字幕翻譯輸出與格式清理調整為簡體中文風格，核心程式、流程設計與專案所有權皆歸原作者所有。請優先參考原專案與原作者說明。
+> Fork 說明：本 fork 將字幕翻譯輸出與格式清理調整為**簡體中文**風格（大陸簡體字幕慣例），核心程式、流程設計與專案所有權皆歸原作者所有。請優先參考原專案與原作者說明。
 
-下載日本綜藝節目，生成繁體中文 SRT / ASS 字幕方便個人使用識讀
+下载日本综艺节目，自动生成**简体中文** SRT / ASS 字幕，方便个人使用识读。
 
 ![](/doc/image2.jpg)
 ![](/doc/image3.png)
 ![](/doc/image1.png)
 
-## 說明
+## 说明
 
-- 目標是 one shot 即可直接觀看，不想校準 (避免被暴雷)
-- 1 小時左右的影片成本大概 $20 台幣 (ASR $6 + 翻譯 $14)，處理時間約 15 分鐘
-- 設定偏好都是個人主觀，如需修改請自行 fork
-- 更詳細請[查看心得](/article.md)
+- 目标是 one shot 即可直接观看，不想校准 (避免被暴雷)
+- 1 小时左右的影片成本大概 $20 台币 (ASR $6 + 翻译 $14)，处理时间约 15 分钟
+- 设定偏好都是个人主观，如需修改请自行 fork
+- 更详细请[查看心得](/article.md)
+
+## 技术栈
+
+- **语言**：Python 3.13+
+- **包管理**：[uv](https://github.com/astral-sh/uv)（推荐）或 pip
+- **媒体处理**：FFmpeg、[yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- **ASR**：[ElevenLabs Scribe v2](https://elevenlabs.io/)（日文语音识别）
+- **翻译**：[Google Gemini](https://ai.google.dev/)（`gemini-3-flash-preview`）
+- **结构修正**：[DeepSeek](https://www.deepseek.com/)（`deepseek-v4-flash`，修正 chunk 输出的 index / timecode 结构错误）
+- **可选后处理**：[Codex CLI](https://github.com/openai/codex)（字幕润色、风格化封面）
+- **核心依赖**：`pydantic` / `pydantic-settings`（配置与项目模型）、`typer`（CLI）、`loguru`（日志）、`google-genai`、`openai`、`elevenlabs`、`ffmpeg-python`、`pycryptodomex`
 
 ## 工具
 
-經過各種嘗試，API、自架等組合後，覺得以下方式最合適
+经过各种尝试，API、自架等组合后，觉得以下方式最合适
 
 ### ASR
 
-`ElevenLabs Scribe v2` 日文辨識效果穩定，尤其在一堆人大聲喧嘩，或者裝傻吐槽之間無間隔狀況都能分析出來。
+`ElevenLabs Scribe v2` 日文辨识效果稳定，尤其在一堆人大声喧哗，或者装傻吐槽之间无间隔状况都能分析出来。
 
-### 翻譯
+### 翻译
 
-測試多種模型還是 `Gemini 3 Flash` 的潤飾最能抓住日本綜藝的韻味 (Pro 更好，但成本...)，加上圖片音檔的理解真的很好，但 `Gemini 3 Flash` 的輸出常常會漏 Index 或弄錯時間軸，所以如果驗證錯誤，會透過 `DeepSeek V4 Flash` 做修正
+测试多种模型还是 `Gemini 3 Flash` 的润饰最能抓住日本综艺的韵味 (Pro 更好，但成本...)，加上图片音档的理解真的很好，但 `Gemini 3 Flash` 的输出常常会漏 Index 或弄错时间轴，所以如果验证错误，会透过 `DeepSeek V4 Flash` 做修正
 
-進行**兩階段翻譯**：
+翻译目标为**简体中文**（大陆简体字幕风格，使用 `酱 / 你 / 广播 / 听众` 等形式，而非 `醬 / 妳 / 廣播 / 聽眾`）。
 
-1. **Pre-pass**：完整 SRT + 節目資訊 + 完整音檔 + 少量全片代表圖片，輸出：人物對照、專有名詞/ASR 修正 dict、梗的固定譯法、整體語氣、每段局部摘要
-2. **併發翻譯**：SRT 按字元數平均切塊，每塊配上 pre-pass 簡報 + 局部摘要 + 該段音檔切片 + 該段的代表圖片，平行送出翻譯
-3. **組裝**：每塊輸出驗證 index/timecode 連續性，使用額外 code 專長便宜模型修正，再拼接寫檔
+进行**两阶段翻译**：
 
-不只聽音訊，也會參考影片抽出的圖片，幫助辨識人物、場景、道具與畫面上的提示文字
+1. **Pre-pass**：完整 SRT + 节目信息 + 完整音档 + 少量全片代表图片，输出：人物对照、专有名词/ASR 修正 dict、梗的固定译法、整体语气、每段局部摘要
+2. **并发翻译**：SRT 按字元数平均切块，每块配上 pre-pass 简报 + 局部摘要 + 该段音档切片 + 该段的代表图片，平行送出翻译
+3. **组装**：每块输出验证 index/timecode 连续性，使用额外 code 专长便宜模型修正，再拼接写档
+
+不只听音讯，也会参考影片抽出的图片，帮助辨识人物、场景、道具与画面上的提示文字
 ![](doc/image4.jpg)
 
-另外，翻譯過程的 chunk / pre-pass 資源與回應會保留在專案資料夾中，方便失敗後直接 resume，不用每次都重切音訊、重抽圖、重跑整個翻譯
+另外，翻译过程的 chunk / pre-pass 资源与回应会保留在专案资料夹中，方便失败后直接 resume，不用每次都重切音讯、重抽图、重跑整个翻译
 
 ## 流程
 
 ```
 Video ID
     ↓
-下載影片 (yt-dlp)
+下载影片 (yt-dlp)
     ↓
-合併影片 (FFmpeg)
+合并影片 (FFmpeg)
     ↓
-提取音檔 (FFmpeg, mono 16kHz opus)
+提取音档 (FFmpeg, mono 16kHz opus)
     ↓
-語音辨識 (ElevenLabs Scribe v2)
+语音辨识 (ElevenLabs Scribe v2)
     ↓
-產生 SRT 字幕
+产生 SRT 字幕
     ↓
-翻譯字幕 (Gemini: pre-pass → 併發 chunk 翻譯 → 組裝驗證)
+翻译字幕 (Gemini: pre-pass → 并发 chunk 翻译 → 组装验证)
     ↓
-潤飾字幕 (Codex, 可選)
+润饰字幕 (Codex, 可选)
     ↓
-Finalize：格式清理，輸出 ASS (套樣式) + SRT
+Finalize：格式清理（简体标点、繁→简用字转换），输出 ASS (套样式) + SRT
     ↓
-歸檔 (可選)
+归档 (可选)
     ↓
-封裝交付 (可選：字幕燒錄進影片)
+封装交付 (可选：字幕烧录进影片)
 ```
 
-## 安裝
+每个阶段都是幂等的：已完成阶段会被跳过，进度自动保存到 `project.json`，失败后可直接重跑 resume。
+
+## 支持来源
+
+通过 yt-dlp 支持以下平台（传入视频 ID 或完整 URL 均可）：
+
+| 平台 | 示例 |
+| --- | --- |
+| Bilibili | `BV1ZArvBaEqL` / `https://www.bilibili.com/video/BV1ZArvBaEqL` |
+| TVer | `ep12345` / `https://tver.jp/episodes/ep12345` |
+| Abema | `90-979_s1_p123` / `https://abema.tv/video/episode/90-979_s1_p123` |
+| YouTube | `v=dQw4w9WgXcQ` / `https://youtu.be/dQw4w9WgXcQ` |
+
+TVer 与 Abema 来源还会额外抓取出演者 (talents) 元数据，作为翻译 pre-pass 的人物锚点。
+
+## 安装
 
 ### 前置需求
 
 - Python 3.13+
-- FFmpeg (自行安裝並加入 PATH)
-- uv (推薦) 或 pip
+- FFmpeg (自行安装并加入 PATH)
+- uv (推荐) 或 pip
+- (可选) Codex CLI — 启用字幕润色 / 封面生成时需要
 
-### 安裝步驟
+### 安装步骤
 
 ```bash
 # 使用 uv
@@ -84,39 +113,55 @@ pip install -e .
 
 ## 使用方式
 
-### 方式一：加入 PATH
-
-將 `scripts/` 資料夾加到系統 PATH，然後執行：
+### 方式一：直接执行（跨平台）
 
 ```bash
-grill <SOURCE> [TRANSLATION_HINT]
+python main.py <SOURCE> [TRANSLATION_HINT] [OPTIONS]
 ```
 
-### 方式二：直接執行
+### 方式二：加入 PATH（Windows）
+
+`scripts/` 下提供 `grill.bat`（Windows 批处理，调用 `.venv` 里的 Python）。将 `scripts/` 加到系统 PATH 后执行：
 
 ```bash
-python main.py <SOURCE> [TRANSLATION_HINT]
+grill <SOURCE> [TRANSLATION_HINT] [OPTIONS]
 ```
 
-- `SOURCE`: 影片 ID 或完整 URL
-- `TRANSLATION_HINT`: 可選，提供給翻譯用的提示，通常是 bilibili 只有隱晦標題的需要
+> 注意：目前仅提供 Windows 启动脚本，macOS / Linux 请使用 `python main.py`。
 
-### 範例
+### 参数
+
+| 参数 | 说明 |
+| --- | --- |
+| `SOURCE` | 影片 ID 或完整 URL |
+| `TRANSLATION_HINT` | 可选，翻译提示。未提供时使用影片标题（bilibili 只有隐晦标题时常用） |
+| `--break-after <STAGE>` | 到达指定阶段后停止，便于调试 / 分段执行。阶段值如 `is_asr_completed`、`is_translated`、`is_finalized` 等 |
+| `--parent-project <PATH>` | 复用某个父专案目录的 `pre_pass.json` 作为本集 pre-pass 种子，实现跨集一致性（接受目录路径，因父专案可能已归档） |
+| `--refine` | 本次运行强制启用 Codex 字幕润色（覆盖 `ENABLE_SRT_REFINE`，默认关闭） |
+| `--cover` | 本次运行强制启用 Codex 风格化封面生成（覆盖 `ENABLE_COVER_GENERATION`，默认关闭；设置 `--break-after` 时整体跳过） |
+
+### 范例
 
 ```bash
-# 使用影片標題作為翻譯提示
-grill BV18KBJBeEmV
+# 使用影片标题作为翻译提示
+python main.py BV18KBJBeEmV
 
-# 自訂翻譯提示
-grill BV1CakEBaEJp "華大千鳥 - 全力100萬 - 間諜 1/7"
+# 自订翻译提示
+python main.py BV1CakEBaEJp "华大千鸟 - 全力100万 - 间谍 1/7"
 
 # 使用完整 URL
-grill "https://www.bilibili.com/video/BV18KBJBeEmV"
+python main.py "https://www.bilibili.com/video/BV18KBJBeEmV"
+
+# 只跑到 ASR 完成就停
+python main.py BV18KBJBeEmV --break-after is_asr_completed
+
+# 复用上一集的 pre-pass，并强制启用润色与封面
+python main.py BV1CakEBaEJp --parent-project projects/BV18KBJBeEmV --refine --cover
 ```
 
-## 環境變數
+## 环境变量
 
-建立 `.env` 檔案：
+建立 `.env` 档案：
 
 ```env
 # ElevenLabs Speech to Text
@@ -124,53 +169,70 @@ ELEVENLABS_API_KEY=xxx
 ELEVENLABS_STT_MODEL=scribe_v2
 ELEVENLABS_STT_LANGUAGE_CODE=jpn
 
-# Google Gemini (翻譯)
+# Google Gemini (翻译)
 GEMINI_API_KEY=xxx
 GEMINI_MODEL=gemini-3-flash-preview
 
-# DeepSeek (chunk 結構修正)
+# DeepSeek (chunk 结构修正)
 DEEPSEEK_API_KEY=xxx
-LLM_CHUNK_FIX_MAX_RETRIES=3            # 修正失敗重試次數
+LLM_CHUNK_FIX_MAX_RETRIES=3            # 修正失败重试次数
 
-# 可選：Gemini 翻譯調校
-GEMINI_THINKING_LEVEL=HIGH             # 翻譯 thinking level: LOW/MEDIUM/HIGH
-GEMINI_PRE_PASS_FRAME_INTERVAL_SECONDS=120 # pre-pass 全片圖片抽樣頻率（每幾秒一張，另外固定包含影片首尾幀）
-GEMINI_PRE_PASS_FRAME_MAX_SIDE=768     # pre-pass 圖片最長邊尺寸
-GEMINI_CHUNK_CHAR_LIMIT=6000           # 每塊目標字元數 (約 5 分鐘字幕)
-GEMINI_CONCURRENCY=10                  # chunk 併發上限
-GEMINI_CHUNK_MAX_RETRIES=3             # chunk 失敗重試次數
-GEMINI_CHUNK_FRAME_INTERVAL_SECONDS=30 # chunk 圖片抽樣頻率（每幾秒一張，另外固定包含每段首尾幀）
-GEMINI_CHUNK_FRAME_MAX_SIDE=768        # chunk 圖片最長邊尺寸
-GEMINI_CHUNK_MISSING_BLOCK_TOLERANCE=2 # 每塊允許未對齊/缺漏字幕區塊數上限
+# 可选：Gemini 翻译调校
+GEMINI_THINKING_LEVEL=HIGH             # 翻译 thinking level: LOW/MEDIUM/HIGH
+GEMINI_PRE_PASS_FRAME_INTERVAL_SECONDS=120 # pre-pass 全片图片抽样频率（每几秒一张，另外固定包含影片首尾帧）
+GEMINI_PRE_PASS_FRAME_MAX_SIDE=768     # pre-pass 图片最长边尺寸
+GEMINI_CHUNK_CHAR_LIMIT=6000           # 每块目标字元数 (约 5 分钟字幕)
+GEMINI_CONCURRENCY=10                  # chunk 并发上限
+GEMINI_CHUNK_MAX_RETRIES=3             # chunk 失败重试次数
+GEMINI_CHUNK_FRAME_INTERVAL_SECONDS=30 # chunk 图片抽样频率（每几秒一张，另外固定包含每段首尾帧）
+GEMINI_CHUNK_FRAME_MAX_SIDE=768        # chunk 图片最长边尺寸
+GEMINI_CHUNK_MISSING_BLOCK_TOLERANCE=2 # 每块允许未对齐/缺漏字幕区块数上限
+GEMINI_INTRO_SKIP_SECONDS=3.0          # 抽样参考帧时跳过影片开头 N 秒（避开电视台 logo/intro 帧），作用于 pre-pass 与首个 chunk
 
-# 可選：Codex 後處理（需安裝 Codex CLI）
-ENABLE_SRT_REFINE=true             # 翻譯後再用 Codex 潤飾繁中字幕
-ENABLE_COVER_GENERATION=true       # 下載後並行 Codex 風格化封面圖
+# 可选：Codex 后处理（需安装 Codex CLI）
+ENABLE_SRT_REFINE=true             # 翻译后再用 Codex 润饰简体字幕
+ENABLE_COVER_GENERATION=true       # 下载后并行 Codex 风格化封面图
+CODEX_EXECUTABLE=codex             # Codex CLI 可执行文件名或绝对路径
+CODEX_DEFAULT_TIMEOUT_SECS=900     # 单次 codex exec 调用超时（秒）
 
-# 可選：下載/歸檔/封裝
-COOKIES_TXT_PATH=cookies.txt       # 影片來源網站 cookies (供 yt-dlp 使用)
-ARCHIVED_PATH=NAS:\bangumi\ai\     # 歸檔路徑 - 處理完直接移至指定資料夾並將資料夾名稱改為影片名稱
-PACKAGE_PATH=NAS:\bangumi\package\ # 封裝路徑 - 將 ASS 字幕燒錄進影片並複製封面到 <package_path>/<id>_<name>/
+# 可选：下载/归档/封装
+COOKIES_TXT_PATH=cookies.txt       # 影片来源网站 cookies (供 yt-dlp 使用)
+ARCHIVED_PATH=NAS:\bangumi\ai\     # 归档路径 - 处理完直接移至指定资料夹并将资料夹名称改为影片名称
+PACKAGE_PATH=NAS:\bangumi\package\ # 封装路径 - 将 ASS 字幕烧录进影片并复制封面到 <package_path>/<id>_<name>/
 ```
 
-## 專案結構
+## 专案结构
 
 ```
 projects/{video_id}/
-├── project.json              # 專案狀態
-├── video.mp4                 # 合併後的影片
+├── project.json              # 专案状态与累计成本
+├── video.mp4                 # 合并后的影片
 ├── video.ja.srt              # 日文原文字幕
-├── .asr/                     # ASR 音檔與 ElevenLabs 原始結果
+├── .asr/                     # ASR 音档与 ElevenLabs 原始结果
 │   ├── audio.opus
 │   └── asr.json
-├── .pre_pass/                # Gemini pre-pass 簡報與圖片快取
+├── .pre_pass/                # Gemini pre-pass 简报与图片快取
 │   └── pre_pass.json
-├── .chunks/                  # chunk 音檔 / 圖片 / 翻譯回應快取（供 resume）
-├── .refine/                  # Codex 潤飾快取（可選）
+├── .chunks/                  # chunk 音档 / 图片 / 翻译回应快取（供 resume）
+├── .refine/                  # Codex 润饰快取（可选）
 ├── poster.jpg                # yt-dlp 取得的原始封面
-├── poster.cover.png          # Codex 風格化封面（可選）
-├── video.cht.srt             # 繁體中文翻譯字幕
-├── video.cht.refined.srt     # Codex 潤飾後字幕（可選）
-├── video.cht.finalized.srt   # 最終 SRT（標點清理，給不支援 ASS 的裝置）
-└── video.cht.ass             # 最終 ASS（套樣式 + 標點清理）
+├── poster.cover.png          # Codex 风格化封面（可选）
+├── video.cht.srt             # 简体中文翻译字幕
+├── video.cht.refined.srt     # Codex 润饰后字幕（可选）
+├── video.cht.finalized.srt   # 最终 SRT（标点清理 + 繁简用字转换，给不支援 ASS 的装置）
+└── video.cht.ass             # 最终 ASS（套样式 + 标点清理 + 繁简用字转换）
 ```
+
+> 文件名沿用的 `.cht` 后缀为历史命名，实际内容为**简体中文**。
+
+## 测试
+
+```bash
+# 使用 uv
+uv run pytest
+
+# 或使用 pip
+pytest
+```
+
+测试覆盖 ASR SRT 生成、Gemini 资产/规整/内联媒体、chunk 结构修正、字幕 finalize、媒体处理、yt-dlp 信息解析、workflow 断点与成本统计等。
