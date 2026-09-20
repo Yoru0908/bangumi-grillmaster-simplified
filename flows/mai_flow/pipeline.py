@@ -1,6 +1,7 @@
 """End-to-end MAI-Transcribe-2 pipeline: video/audio → SRT.
 
     python -m flows.mai_flow.pipeline <input> <work_dir> [--srt out.srt]
+        [--llm-segment] [--translate]
 
 Stages (all resumable — chunk JSONs and wav slices are cached):
     1. extract   input → work_dir/audio.wav (16kHz mono PCM)
@@ -8,6 +9,8 @@ Stages (all resumable — chunk JSONs and wav slices are cached):
     3. transcribe per-chunk API calls → chunks/chunk_XX.wav.json
     4. merge     → work_dir/asr.json (ElevenLabs-shaped payload)
     5. srt       → work_dir/out.srt via services.elevenlabs.srt_builder
+    6. llm       (optional) LLM merge → out_llm_ja.srt;
+                 --translate adds zh translation → out_zh.srt
 """
 
 from __future__ import annotations
@@ -18,12 +21,20 @@ import sys
 import time
 from pathlib import Path
 
+from dotenv import load_dotenv
 from loguru import logger
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 # Allow running as `python -m flows.mai_flow.pipeline` from repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from services.elevenlabs.srt_builder import convert_payload_to_srt  # noqa: E402
+from services.elevenlabs.srt_builder import (  # noqa: E402
+    SrtFormatOptions,
+    _build_utterances,
+    _extract_tokens,
+    convert_payload_to_srt,
+)
 
 from .chunker import (  # noqa: E402
     extract_audio, make_chunks, probe_duration, write_manifest,
@@ -37,11 +48,14 @@ def run(
     work_dir: Path,
     srt_path: Path | None = None,
     phrases: list[str] | None = None,
+    llm_segment: bool = False,
+    translate: bool = False,
 ) -> Path:
     work_dir.mkdir(parents=True, exist_ok=True)
     wav_path = work_dir / "audio.wav"
     asr_path = work_dir / "asr.json"
     srt_path = srt_path or work_dir / "out.srt"
+    result_path = srt_path
 
     # 1. extract
     if not wav_path.exists():
@@ -77,10 +91,45 @@ def run(
         f"${meta['cost_usd']:.4f} → {asr_path}"
     )
 
-    # 5. SRT via the existing word-level segmentation engine
+    # Keep the deterministic baseline unchanged; the no-hard-punctuation
+    # policy applies only to the LLM candidate segmentation below.
     srt_path.write_text(convert_payload_to_srt(payload), encoding="utf-8")
     logger.success(f"SRT written: {srt_path}")
-    return srt_path
+
+    # 6. optional LLM stages: merge segmentation + zh translation
+    if llm_segment or translate:
+        from .segment_llm import MergedLine, build_atoms, merge_utterances
+        from .translate_llm import render_srt, translate_lines
+
+        # Deterministic word-level atoms; the LLM only merges them.
+        atoms = build_atoms(payload)
+        logger.info(f"{len(atoms)} atoms for LLM stage")
+
+        if llm_segment:
+            lines = merge_utterances(
+                atoms, work_dir / "merge_cache"
+            )
+        else:
+            lines = [
+                MergedLine(a["start"], a["end"], a["text"], [i])
+                for i, a in enumerate(atoms)
+            ]
+
+        ja_srt = work_dir / "out_llm_ja.srt"
+        ja_srt.write_text(
+            render_srt(lines, [l.text for l in lines]), encoding="utf-8"
+        )
+        logger.success(f"LLM-segmented JA SRT: {ja_srt}")
+        result_path = ja_srt
+
+        if translate:
+            zh = translate_lines(lines, work_dir / "zh_cache")
+            zh_srt = work_dir / "out_zh.srt"
+            zh_srt.write_text(render_srt(lines, zh), encoding="utf-8")
+            logger.success(f"ZH SRT: {zh_srt}")
+            result_path = zh_srt
+
+    return result_path
 
 
 def main() -> None:
@@ -88,8 +137,18 @@ def main() -> None:
     parser.add_argument("input", type=Path, help="video or audio file")
     parser.add_argument("work_dir", type=Path, help="working/output directory")
     parser.add_argument("--srt", type=Path, default=None, help="SRT output path")
+    parser.add_argument("--llm-segment", action="store_true",
+                        help="LLM merge pass over utterances")
+    parser.add_argument("--translate", action="store_true",
+                        help="translate merged lines to zh (implies segment)")
     args = parser.parse_args()
-    run(args.input, args.work_dir, args.srt)
+    run(
+        args.input,
+        args.work_dir,
+        args.srt,
+        llm_segment=args.llm_segment or args.translate,
+        translate=args.translate,
+    )
 
 
 if __name__ == "__main__":

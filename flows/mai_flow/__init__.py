@@ -15,6 +15,12 @@ Outputs in <work_dir>:
     out.srt              final subtitles via srt_builder
 """
 
-from .pipeline import run
+
+def run(*args, **kwargs):
+    """Lazily import the pipeline so ``python -m`` has no double-import warning."""
+    from .pipeline import run as _run
+
+    return _run(*args, **kwargs)
+
 
 __all__ = ["run"]
